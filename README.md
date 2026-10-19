@@ -49,6 +49,14 @@ usuarios/{uid}/historico/{id}
   date, nm, k, det[] (cargas) ou mod, min (cardio), ts
 ```
 
+## Biblioteca de exercícios (`exercicios.json`)
+
+782 exercícios da Free Exercise DB (domínio público, Unlicense), com nomes traduzidos para o português e organizados por grupo muscular: Peito, Costas, Ombros, Bíceps, Tríceps, Antebraço, Abdômen, Pernas, Glúteos, Panturrilhas, Pescoço, Cardio e Alongamento.
+
+Campos de cada exercício: `id`, `nome`, `nome_en`, `grupo`, `primarios`, `secundarios`, `mapa` (músculos no mapa do app), `equipamento`, `nivel`, `categoria`, `mecanica`, `forca`, `impacto` (alto = pliometria), `imagens` (duas fotos, início e fim do movimento) e `instrucoes_en`.
+
+As fotos vêm do CDN jsDelivr, fixadas no commit indicado em `commit`, e alternam no app como uma animação.
+
 ## GIFs dos exercícios
 
 Coloque os arquivos em `gifs/` com o id do exercício (ex.: `gifs/legpress.gif`) e adicione o id na lista `GIFS_PRONTOS` no `index.html`. Ids: legpress, puxada, supmaq, remsent, flexora, prancha, sentlev, desenv, puxneutra, crucifixo, extensora, panturrilha, deadbug, supinc, remuni, abducao, roscapolia, tricpolia, farmer, bike, eliptico, esteira, hidro, caminhada.

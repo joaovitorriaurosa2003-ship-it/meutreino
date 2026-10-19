@@ -128,6 +128,11 @@ label.fld{display:grid;gap:6px;font-size:.8rem;color:var(--muted);font-weight:60
 .card .nm{font-size:.86rem;font-weight:600;line-height:1.25;padding:0 2px 2px}
 .card .gp{font-size:.72rem;color:var(--muted);padding:0 2px}
 svg.figsvg{width:100%;height:100%;display:block}
+.ph{position:relative;display:block;width:100%;height:100%;background:#0E1412}
+.ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.ph img:nth-child(2){animation:swap 1.8s steps(1,end) infinite}
+@keyframes swap{0%{opacity:0}50%{opacity:1}}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 16px) 55%,calc(100% - 11px) 55%;background-size:5px 5px;background-repeat:no-repeat;padding-right:28px}
 .fig img.gif,.bigfig img.gif{width:100%;height:100%;object-fit:contain;display:block;border-radius:inherit;background:#fff}
 .search{width:100%;padding:13px 14px;border-radius:14px;background:var(--surface)}
 
@@ -187,11 +192,12 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
 
 /* folha e aviso */
 .sheet{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet .in>*{flex-shrink:0}
 .sheet .in{background:var(--surface);border-top:1px solid var(--line);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:22px 22px 0 0;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
 .sheet .bigfig{background:radial-gradient(circle at 50% 40%,#1D2825,var(--fig));border-radius:16px;aspect-ratio:6/5;max-width:100%;overflow:hidden}
 .steps{margin:0;padding-left:20px;display:grid;gap:6px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(88px + env(safe-area-inset-bottom,0px));background:var(--accent);color:var(--accent-ink);padding:10px 16px;border-radius:12px;font-weight:700;z-index:30}
-@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}.ph img:nth-child(2){display:none}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.js"></script>
@@ -302,7 +308,30 @@ async function gifPut(id,blob){const db=await idb();await new Promise((res,rej)=
 function setGif(id,blob){if(GIF[id])URL.revokeObjectURL(GIF[id]);if(blob)GIF[id]=URL.createObjectURL(blob);else delete GIF[id]}
 const GIFS_PRONTOS=[]; /* ids dos exercícios com arquivo em gifs/<id>.gif */
 const gifSrc=id=>GIF[id]||(GIFS_PRONTOS.includes(id)?'gifs/'+id+'.gif':null);
-function figure(e,id){const g=gifSrc(e.id);return g?`<img class="gif" src="${g}" alt="${e.nm}" loading="lazy">`:figSVG(e,id)}
+/* ---------- biblioteca de exercícios (exercicios.json) ---------- */
+const IMG_BASE='https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@f00c92c7dcf1216a928a52c3706c7ce8e2f71ed5/exercises/';
+const GRUPOS_ORDEM=['Peito','Costas','Ombros','Bíceps','Tríceps','Antebraço','Abdômen','Pernas','Glúteos','Panturrilhas','Pescoço','Cardio','Alongamento'];
+let DBX=null,DBX_ERR=false,DBX_LOADING=false,libMode='plano',bGrupo='Todos',bEq='Todos',bNiv='Todos',bLow=true;
+async function loadDBX(){if(DBX||DBX_LOADING)return;DBX_LOADING=true;DBX_ERR=false;
+  try{const r=await fetch('exercicios.json');if(!r.ok)throw 0;DBX=await r.json();DBX.map=Object.fromEntries(DBX.exercicios.map(e=>[e.id,e]))}catch(e){DBX_ERR=true}
+  DBX_LOADING=false;if(tab==='exercicios')render()}
+/* foto em duas posições alternando, como um GIF */
+const photo=(imgs,alt)=>`<span class="ph">${imgs.slice(0,2).map((i,k)=>`<img src="${IMG_BASE+i}" alt="${k?'':esc(alt)}" loading="lazy" decoding="async">`).join('')}</span>`;
+function dbCard(e){return `<button class="card" data-dbx="${e.id}"><div class="fig">${photo(e.imagens,e.nome)}</div><div class="nm">${esc(e.nome)}</div><div class="gp">${esc(e.primarios[0]||e.grupo)} · ${esc(e.equipamento)}</div></button>`}
+function figure(e,id){const g=gifSrc(e.id);if(g)return `<img class="gif" src="${g}" alt="${e.nm}" loading="lazy">`;if(e.foto)return photo([e.foto+'/0.jpg',e.foto+'/1.jpg'],e.nm);return figSVG(e,id)}
+function openDbx(id){
+  const e=DBX.map[id];if(!e)return;const hl=new Set(e.mapa);
+  $('#layer').innerHTML=`<div class="sheet" id="sh" role="dialog" aria-modal="true" aria-label="${esc(e.nome)}"><div class="in">
+   <div class="row between" style="flex-wrap:nowrap"><div style="min-width:0"><div class="eyebrow">${esc(e.grupo)} · ${esc(e.equipamento)}</div><h2>${esc(e.nome)}</h2><div class="muted" style="font-size:.8rem">${esc(e.nome_en)}</div></div><button class="btn ghost sm" id="shx">Fechar</button></div>
+   <div class="bigfig">${photo(e.imagens,e.nome)}</div>
+   <div class="row" style="gap:6px"><span class="tag">${esc(e.nivel)}</span><span class="tag">${esc(e.categoria)}</span>${e.mecanica?`<span class="tag">${esc(e.mecanica)}</span>`:''}${e.impacto==='alto'?'<span class="pill low">Alto impacto</span>':''}</div>
+   <div class="stack" style="gap:8px"><div class="eyebrow">Músculos trabalhados</div>${muscleMap(m=>hl.has(m)?(e.mapa[0]===m?'var(--accent)':'var(--accent-2)'):'var(--mus)')}
+    <p style="font-size:.88rem"><b>Principal:</b> ${e.primarios.join(', ')||'-'}${e.secundarios.length?`<br><span class="muted"><b>Auxiliares:</b> ${e.secundarios.join(', ')}</span>`:''}</p></div>
+   ${e.instrucoes_en.length?`<div class="stack" style="gap:6px"><div class="eyebrow">Como fazer (em inglês)</div><ol class="steps" lang="en" style="font-size:.88rem">${e.instrucoes_en.map(t=>`<li>${esc(t)}</li>`).join('')}</ol></div>`:''}
+   ${e.impacto==='alto'?'<div class="warn">Exercício com saltos. Deixe para quando o médico liberar treinos de impacto.</div>':''}
+  </div></div>`;
+  $('#sh').addEventListener('click',ev=>{if(ev.target.id==='sh'||ev.target.id==='shx')$('#layer').innerHTML=''});
+}
 
 /* ---------- mapa muscular (frente e costas) ---------- */
 const MNAME={chest:'Peitoral',back:'Costas',shoulders:'Ombros',biceps:'Bíceps',triceps:'Tríceps',forearm:'Antebraço',abs:'Abdômen',quads:'Quadríceps',hams:'Posteriores da coxa',glutes:'Glúteos',glutemed:'Glúteo médio',calves:'Panturrilhas'};
@@ -448,6 +477,7 @@ const EX=[
   how:['Terreno plano no começo.','Tênis com bom amortecimento.','Ritmo em que você consegue conversar.','Leve água.'],tip:'Ideal para o domingo, leve e sem pressa.'}
 ];
 const EXM=Object.fromEntries(EX.map(e=>[e.id,e]));
+const FOTO={"legpress": "Leg_Press", "puxada": "Wide-Grip_Lat_Pulldown", "supmaq": "Machine_Bench_Press", "remsent": "Seated_Cable_Rows", "flexora": "Seated_Leg_Curl", "prancha": "Plank", "sentlev": "Chair_Squat", "desenv": "Machine_Shoulder_Military_Press", "puxneutra": "V-Bar_Pulldown", "crucifixo": "Butterfly", "extensora": "Leg_Extensions", "panturrilha": "Seated_Calf_Raise", "deadbug": "Dead_Bug", "supinc": "Leverage_Incline_Chest_Press", "remuni": "One-Arm_Dumbbell_Row", "abducao": "Thigh_Abductor", "roscapolia": "Standing_Biceps_Cable_Curl", "tricpolia": "Triceps_Pushdown", "bike": "Bicycling_Stationary", "eliptico": "Elliptical_Trainer", "esteira": "Walking_Treadmill", "caminhada": "Trail_Running_Walking"};EX.forEach(e=>{if(FOTO[e.id])e.foto=FOTO[e.id]});
 
 /* ---------- plano ---------- */
 const PLAN={
@@ -704,15 +734,35 @@ function vTreinos(){
     <p class="muted" style="font-size:.88rem">Por enquanto, evite corrida e pular corda. A partir da semana 8, um cardio pode ser intervalado: 1 min forte e 2 min leve, 6 a 8 vezes.</p>
     <button class="btn ghost wide" data-cardio="bike">Começar cardio</button></section></div>`;
 }
+const norm=t=>String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 function vExercicios(){
-  const groups=['Todos',...new Set(EX.map(e=>e.gp))];
-  const q=query.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-  const list=EX.filter(e=>(filter==='Todos'||e.gp===filter)&&(!q||(e.nm+' '+e.gp+' '+e.eq).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').includes(q)));
-  return `<div class="stack"><div><div class="eyebrow">${EX.length} exercícios do seu plano</div><h2>Exercícios</h2></div>
-   <input class="search" id="q" type="search" placeholder="Buscar exercício, músculo ou aparelho" value="${esc(query)}">
-   <div class="chips">${groups.map(g=>`<button class="chip" data-f="${g}" aria-pressed="${g===filter}">${g}</button>`).join('')}</div>
-   ${list.length?`<div class="grid">${list.slice(0,libShow).map(e=>card(e)).join('')}</div>`:`<div class="empty">Nenhum exercício encontrado para essa busca.</div>`}
-   ${list.length>libShow?`<button class="btn ghost wide" id="moreLib">Ver mais (${list.length-libShow})</button>`:''}</div>`;
+  const modes=`<div class="seg" role="group" aria-label="Origem dos exercícios"><button data-lm="plano" aria-pressed="${libMode==='plano'}">Meu plano</button><button data-lm="bib" aria-pressed="${libMode==='bib'}">Biblioteca${DBX?' ('+DBX.exercicios.length+')':''}</button></div>`;
+  const search=`<input class="search" id="q" type="search" placeholder="${libMode==='bib'?'Buscar por nome, músculo ou aparelho':'Buscar exercício, músculo ou aparelho'}" value="${esc(query)}">`;
+  const q=norm(query.trim());
+  if(libMode==='plano'){
+    const groups=['Todos',...new Set(EX.map(e=>e.gp))];
+    const list=EX.filter(e=>(filter==='Todos'||e.gp===filter)&&(!q||norm(e.nm+' '+e.gp+' '+e.eq).includes(q)));
+    return `<div class="stack"><div><div class="eyebrow">Exercícios</div><h2>Exercícios</h2></div>${modes}${search}
+     <div class="chips">${groups.map(g=>`<button class="chip" data-f="${g}" aria-pressed="${g===filter}">${g}</button>`).join('')}</div>
+     ${list.length?`<div class="grid">${list.slice(0,libShow).map(e=>card(e)).join('')}</div>`:`<div class="empty">Nenhum exercício encontrado para essa busca.</div>`}
+     ${list.length>libShow?`<button class="btn ghost wide" id="moreLib">Ver mais (${list.length-libShow})</button>`:''}</div>`;
+  }
+  if(!DBX){loadDBX();return `<div class="stack"><div><div class="eyebrow">Exercícios</div><h2>Exercícios</h2></div>${modes}<div class="empty" style="min-height:30vh;align-content:center">${DBX_ERR?'Não foi possível carregar a biblioteca. Verifique a internet e toque em Biblioteca de novo.':'Carregando a biblioteca de exercícios...'}</div></div>`}
+  const all=DBX.exercicios;
+  const grupos=['Todos',...GRUPOS_ORDEM.filter(g=>all.some(e=>e.grupo===g))];
+  const eqs=['Todos',...[...new Set(all.map(e=>e.equipamento))].sort((a,b)=>a.localeCompare(b,'pt'))];
+  const list=all.filter(e=>(bGrupo==='Todos'||e.grupo===bGrupo)&&(bEq==='Todos'||e.equipamento===bEq)&&(bNiv==='Todos'||e.nivel===bNiv)&&(!bLow||e.impacto==='baixo')
+    &&(!q||norm(e.nome+' '+e.nome_en+' '+e.primarios.join(' ')+' '+e.equipamento).includes(q)));
+  return `<div class="stack"><div><div class="eyebrow">Exercícios</div><h2>Exercícios</h2></div>${modes}${search}
+   <div class="chips">${grupos.map(g=>`<button class="chip" data-bg="${g}" aria-pressed="${g===bGrupo}">${g}${g==='Todos'?'':' '+all.filter(e=>e.grupo===g).length}</button>`).join('')}</div>
+   <div class="fields" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+    <label class="fld" for="bEq">Aparelho<select id="bEq">${eqs.map(x=>`<option ${x===bEq?'selected':''}>${x}</option>`).join('')}</select></label>
+    <label class="fld" for="bNiv">Nível<select id="bNiv">${['Todos','Iniciante','Intermediário','Avançado'].map(x=>`<option ${x===bNiv?'selected':''}>${x}</option>`).join('')}</select></label></div>
+   <label class="row muted" for="bLow" style="gap:8px;font-size:.88rem"><input type="checkbox" id="bLow" ${bLow?'checked':''}> Só baixo impacto (sem saltos)</label>
+   <div class="muted" style="font-size:.82rem">${list.length} exercício${list.length===1?'':'s'}</div>
+   ${list.length?`<div class="grid">${list.slice(0,libShow).map(dbCard).join('')}</div>`:`<div class="empty">Nenhum exercício com esses filtros.</div>`}
+   ${list.length>libShow?`<button class="btn ghost wide" id="moreLib">Ver mais (${list.length-libShow})</button>`:''}
+   <p class="muted" style="font-size:.75rem">Fotos e dados: Free Exercise DB, domínio público.</p></div>`;
 }
 function exSeries(id){
   const out=[];[...HIST].reverse().forEach(h=>{if(!h.det)return;const d=h.det.find(x=>x.id===id);if(!d)return;
@@ -917,6 +967,9 @@ document.addEventListener('click',e=>{
   if(t.dataset.pt){progTab=t.dataset.pt;render();return}
   if(t.dataset.pex){progEx=t.dataset.pex;render();return}
   if(t.id==='moreLib'){libShow+=12;render();return}
+  if(t.dataset.lm){libMode=t.dataset.lm;libShow=12;query='';if(libMode==='bib'&&DBX_ERR){DBX_ERR=false;loadDBX()}render();return}
+  if(t.dataset.bg){bGrupo=t.dataset.bg;libShow=12;render();return}
+  if(t.dataset.dbx){openDbx(t.dataset.dbx);return}
   if(t.id==='moreHist'){histShow+=6;render();return}
   if(t.id==='moreMed'){medShow+=5;render();return}
   if(t.id==='moreMusc'){muscShow=MUSCLES.length;render();return}
@@ -956,6 +1009,9 @@ document.addEventListener('change',e=>{
   const t=e.target;
   if(t.id==='startIn'&&t.value){start=t.value;DB.start(start);PERFIL={...PERFIL,inicio:start};DB.perfil(PERFIL);render()}
   if(t.id==='ivl'){cardioRun.intervalado=t.checked;render()}
+  if(t.id==='bEq'){bEq=t.value;libShow=12;render()}
+  if(t.id==='bNiv'){bNiv=t.value;libShow=12;render()}
+  if(t.id==='bLow'){bLow=t.checked;libShow=12;render()}
   if(t.id==='tgt'){cardioRun.target=Math.max(5,+t.value||20);render()}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#sh'))$('#layer').innerHTML=''});
