@@ -57,6 +57,12 @@ Campos de cada exercício: `id`, `nome`, `nome_en`, `grupo`, `primarios`, `secun
 
 As fotos vêm do CDN jsDelivr, fixadas no commit indicado em `commit`, e alternam no app como uma animação.
 
+## Treinos
+
+- **Plano:** A, B e C da rotina semanal, com séries e repetições que mudam conforme a fase.
+- **Meus treinos:** montados no app (Treinos > Meus treinos > Montar novo treino). Escolha o grupo muscular, adicione exercícios da biblioteca, defina séries e repetições (em branco segue a fase) e a ordem. Ficam salvos na conta (`usuarios/{uid}.treinos`).
+- **Modelos:** seis treinos prontos de baixo impacto: Full body em máquinas; Peito, ombros e tríceps; Costas e bíceps; Pernas e glúteos sem impacto; Halteres (casa ou academia); Core e mobilidade. Dá para começar direto ou copiar e editar.
+
 ## GIFs dos exercícios
 
 Coloque os arquivos em `gifs/` com o id do exercício (ex.: `gifs/legpress.gif`) e adicione o id na lista `GIFS_PRONTOS` no `index.html`. Ids: legpress, puxada, supmaq, remsent, flexora, prancha, sentlev, desenv, puxneutra, crucifixo, extensora, panturrilha, deadbug, supinc, remuni, abducao, roscapolia, tricpolia, farmer, bike, eliptico, esteira, hidro, caminhada.
