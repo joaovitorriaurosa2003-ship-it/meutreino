@@ -61,6 +61,9 @@ As fotos vêm do CDN jsDelivr, fixadas no commit indicado em `commit`, e alterna
 
 - **Plano:** A, B e C da rotina semanal, com séries e repetições que mudam conforme a fase.
 - **Meus treinos:** montados no app (Treinos > Meus treinos > Montar novo treino). Escolha o grupo muscular, adicione exercícios da biblioteca, defina séries e repetições (em branco segue a fase) e a ordem. Ficam salvos na conta (`usuarios/{uid}.treinos`).
+- **Gerador automático:** Treinos > Gerar programa automático. Escolha dias por semana (2 a 6), local (academia, só halteres ou em casa) e tempo por treino (30, 45 ou 60 min). O app monta a divisão (full body, superior/inferior, grupos por dia ou empurrar/puxar/pernas) só com exercícios de baixo impacto, com séries, repetições, descanso e carga sugerida (última carga registrada). Em 30 min, usa bi-sets. Pode salvar e já distribuir na semana.
+- **Semana:** Treinos > Semana. Escolha o que fazer em cada dia (treino, cardio, caminhada leve ou descanso). A tela Hoje segue essa agenda (`usuarios/{uid}.agenda`).
+- **Campos por exercício:** séries, repetições, descanso (com cronômetro automático ao marcar a série), carga alvo, método (bi-set com o próximo ou drop-set na última série) e observação.
 - **Modelos:** seis treinos prontos de baixo impacto: Full body em máquinas; Peito, ombros e tríceps; Costas e bíceps; Pernas e glúteos sem impacto; Halteres (casa ou academia); Core e mobilidade. Dá para começar direto ou copiar e editar.
 
 ## GIFs dos exercícios
@@ -69,4 +72,4 @@ Coloque os arquivos em `gifs/` com o id do exercício (ex.: `gifs/legpress.gif`)
 
 ## Ao publicar uma nova versão
 
-Troque `meutreino-v1` no `sw.js` (v2, v3...) para os celulares baixarem a versão nova.
+Troque a versão (`meutreino-v5`) no `sw.js` (v2, v3...) para os celulares baixarem a versão nova.
