@@ -1,11 +1,54 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Só o dono acessa, e só os próprios dados
+
+    // ---------- papéis ----------
+    function signed() { return request.auth != null && request.auth.token.email_verified == true; }
+    function em() { return request.auth.token.email.lower(); }
+    function isAdmin() { return signed() && em() == 'joaovitorriaurosa2003@gmail.com'; }
+    function trPath() { return /databases/$(database)/documents/treinadores/$(em()); }
+    function isTreinador() {
+      return signed() && (isAdmin() || (exists(trPath()) && get(trPath()).data.ativo == true));
+    }
+    function coachOf(d) { return isTreinador() && (isAdmin() || d.treinadorEmail == em()); }
+
+    // ---------- treinadores: só o administrador cadastra ----------
+    match /treinadores/{email} {
+      allow read: if isAdmin() || (signed() && em() == email);
+      allow write: if isAdmin();
+    }
+
+    // ---------- biblioteca de treinos: todos os treinadores leem, só o autor edita ----------
+    match /treinos/{id} {
+      allow read: if isTreinador();
+      allow create: if isTreinador() && request.resource.data.autorEmail == em();
+      allow update: if isTreinador() && (resource.data.autorEmail == em() || isAdmin())
+                    && request.resource.data.autorEmail == resource.data.autorEmail;
+      allow delete: if isTreinador() && (resource.data.autorEmail == em() || isAdmin());
+    }
+
+    // ---------- atletas: o próprio atleta e o treinador dele ----------
+    match /atletas/{email} {
+      allow read: if (signed() && em() == email) || (resource != null && coachOf(resource.data)) || isAdmin();
+      allow create: if isTreinador() && email == email.lower()
+                    && request.resource.data.treinadorEmail == em();
+      // treinador do atleta altera tudo (sem passar o atleta para outro treinador, exceto o admin)
+      // o atleta só altera rascunho, perfil, início do plano e último treino
+      allow update: if (coachOf(resource.data) && (isAdmin() || request.resource.data.treinadorEmail == em()))
+                    || (signed() && em() == email
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rascunho','perfil','inicio','ultimo']));
+      allow delete: if coachOf(resource.data);
+
+      match /{sub}/{doc} {
+        allow read, write: if (signed() && em() == email)
+                           || coachOf(get(/databases/$(database)/documents/atletas/$(email)).data);
+      }
+    }
+
+    // ---------- dados antigos do uso pessoal (só leitura para migrar) ----------
     match /usuarios/{uid}/{document=**} {
-      allow read, write: if request.auth != null
-        && request.auth.uid == uid
-        && request.auth.token.email == 'joaovitorriaurosa2003@gmail.com';
+      allow read: if signed() && request.auth.uid == uid && isAdmin();
+      allow write: if false;
     }
   }
 }

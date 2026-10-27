@@ -135,6 +135,18 @@ svg.figsvg{width:100%;height:100%;display:block}
 select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 16px) 55%,calc(100% - 11px) 55%;background-size:5px 5px;background-repeat:no-repeat;padding-right:28px}
 .fig img.gif,.bigfig img.gif{width:100%;height:100%;object-fit:contain;display:block;border-radius:inherit;background:#fff}
 .wk .thumbs{display:flex;gap:6px}
+.atl{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:12px;align-items:center;text-align:left;color:var(--ink);width:100%}
+.av{width:40px;height:40px;border-radius:12px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:1.25rem;flex:0 0 auto}
+.av.lg{width:56px;height:56px;border-radius:16px;font-size:1.8rem}
+.warnc{color:var(--amber)}
+.frow{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:.9rem}
+.frow:last-child{border-bottom:0}
+.frow b{text-align:right;overflow-wrap:anywhere}
+.trow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.trow:last-child{border-bottom:0}
+.trow.today b{color:var(--accent)}
+.copyrow{display:flex;gap:10px;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:10px;padding:10px 12px;overflow-wrap:anywhere}
+textarea{font:inherit;color:var(--ink);background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;resize:vertical;min-height:70px}
 .agrow{display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;font-weight:700;font-size:.9rem}
 .agrow select{width:100%}
 .glist{display:grid;grid-template-columns:52px minmax(0,1fr);gap:10px;align-items:center}
@@ -514,7 +526,8 @@ const WEEK=[ // 0 = domingo
  {k:'B',ab:'Qua',nm:'Treino B'},{k:'cardio',ab:'Qui',nm:'Cardio'},{k:'C',ab:'Sex',nm:'Treino C'},{k:'cardio',ab:'Sáb',nm:'Cardio'}];
 const AB=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'],AGENDA_PADRAO=['leve','A','cardio','B','cardio','C','cardio'];
 let AGENDA=null;
-const agenda=()=>AGENDA||AGENDA_PADRAO;
+const DESC7=['descanso','descanso','descanso','descanso','descanso','descanso','descanso'];
+const agenda=()=>AGENDA||(DB.online?DESC7:AGENDA_PADRAO);
 function dayPlan(wd){const k=agenda()[wd]||'descanso',w=typeof workoutDef==='function'?workoutDef(k):null;
   return{k,ab:AB[wd],gym:!!w,nm:w?w.nm:k==='cardio'?'Cardio':k==='leve'?'Caminhada leve':'Descanso'}}
 const isoDay=d=>{const x=new Date(d);x.setHours(0,0,0,0);return x};
@@ -710,6 +723,7 @@ function vHoje(){
     <div><h1>${esc(d.nm)}</h1>${isGym?`<p class="muted" style="margin-top:4px">${gnames}</p>`:''}</div>
     ${isGym?`<div class="trio">${ps?`<div><b>${ps.length}</b><span>exercícios</span></div><div><b>${ps.reduce((a,e)=>a+(+e.series||p.sets),0)}</b><span>séries no total</span></div><div><b>~${estMin(wd_)} min</b><span>duração</span></div>`:`<div><b>${p.sets}</b><span>séries</span></div><div><b>${p.reps}</b><span>repetições</span></div><div><b>${p.rest.replace(' s','s')}</b><span>descanso</span></div>`}</div>
       <button class="btn wide" data-start="${d.k}">${session&&session.k===d.k?'Continuar treino':'Começar treino'}</button>`
+     :d.k==='descanso'&&DB.online&&!TREINOS.length&&agenda().every(k=>k==='descanso')?`<p class="muted">Seu treinador ainda não montou sua semana. Os treinos aparecem aqui assim que ele enviar.</p>`
      :d.k==='descanso'?`<p class="muted">Dia de descanso. Uma caminhada leve de 15 a 20 minutos ajuda na recuperação, se tiver vontade.</p>`
      :`<div class="trio"><div><b>${d.k==='leve'?'30':cm.min}</b><span>minutos</span></div><div><b>Moderado</b><span>dá para conversar</span></div><div><b>${w>=8&&d.k==='cardio'?'Opcional':'Contínuo'}</b><span>${w>=8?'intervalado':'ritmo'}</span></div></div>
       <button class="btn wide" data-cardio="${d.k==='leve'?'caminhada':'bike'}">Começar cardio</button>`}
@@ -753,7 +767,18 @@ function vCorpo(){
 function card(e,small){
   return `<button class="card" data-ex="${e.id}"><div class="fig">${figure(e,e.id)}</div><div class="nm" ${small?'style="font-size:.78rem"':''}>${e.nm}</div>${small?'':`<div class="gp">${e.gp} · ${e.eq}</div>`}</button>`;
 }
+function vTreinosAtleta(){
+  const segs=[['semana','Semana'],['meus','Meus treinos']];if(!['semana','meus'].includes(tView))tView='semana';
+  const today=new Date().getDay();
+  return `<div class="stack"><div><div class="eyebrow">Montados pelo seu treinador</div><h2>Treinos</h2></div>
+   <div class="seg" role="group" aria-label="Tipo de treino">${segs.map(x=>`<button data-tv="${x[0]}" aria-pressed="${tView===x[0]}">${x[1]}</button>`).join('')}</div>
+   ${tView==='meus'?(TREINOS.length?TREINOS.map(w=>wCard(w,'atl')).join(''):'<div class="panel empty"><h3>Nenhum treino ainda</h3><p>Assim que seu treinador enviar seus treinos, eles aparecem aqui.</p></div>')
+   :`<section class="panel stack" style="gap:4px">${[1,2,3,4,5,6,0].map(wd=>{const d=dayPlan(wd);return `<div class="trow ${wd===today?'today':''}"><span style="min-width:0"><b>${AB[wd]}</b> <span class="${d.k==='descanso'?'muted':''}">${esc(d.nm)}</span></span>
+     ${d.gym?`<button class="btn sm ${wd===today?'':'ghost'}" data-start="${d.k}">${session&&session.k===d.k?'Continuar':'Começar'}</button>`:d.k==='cardio'||d.k==='leve'?`<button class="btn ghost sm" data-cardio="${d.k==='leve'?'caminhada':'bike'}">Cardio</button>`:''}</div>`}).join('')}</section>
+     <p class="muted" style="font-size:.8rem">Sua semana é definida pelo seu treinador.</p>`}</div>`;
+}
 function vTreinos(){
+  if(!CAN_PLAN())return vTreinosAtleta();
   const w=weekNo(),p=presc(w),cm=cardioMin(w);
   return `<div class="stack"><div><div class="eyebrow">Plano, seus treinos e modelos</div><h2>Treinos</h2></div>
    <div class="seg" role="group" aria-label="Tipo de treino">${[['semana','Semana'],['meus','Meus treinos'],['modelos','Modelos']].map(x=>`<button data-tv="${x[0]}" aria-pressed="${tView===x[0]}">${x[1]}</button>`).join('')}</div>
@@ -768,7 +793,7 @@ function vTreinos(){
       <optgroup label="Modelos">${MODELOS.map(t=>`<option value="${t.id}" ${k===t.id?'selected':''}>${esc(t.nm)}</option>`).join('')}</optgroup></select></label>`}).join('')}</div>
      <p class="muted" style="font-size:.8rem">O treino de cada dia aparece na tela Hoje.</p></section>
    <button class="btn ghost wide" id="openGen2">${ic('bolt',18)} Gerar programa automático</button>
-   ${Object.entries(PLAN).map(([k,t])=>`<section class="panel stack">
+   ${(DB.online?Object.entries(PLAN).filter(([k])=>agenda().includes(k)):Object.entries(PLAN)).map(([k,t])=>`<section class="panel stack">
      <div class="row between"><h3 style="font-size:1.5rem">${t.nm}</h3><span class="tag">${p.sets} × ${p.reps}</span></div>
      <div class="grid g3">${t.ex.map(id=>card(EXM[id],true)).join('')}</div>
      <button class="btn ${session&&session.k===k?'':'ghost'} wide" data-start="${k}">${session&&session.k===k?'Continuar':'Começar'} ${t.nm}</button></section>`).join('')}
@@ -779,7 +804,7 @@ function vTreinos(){
 }
 const norm=t=>String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 function vExercicios(){
-  const modes=`<div class="seg" role="group" aria-label="Origem dos exercícios"><button data-lm="plano" aria-pressed="${libMode==='plano'}">Meu plano</button><button data-lm="bib" aria-pressed="${libMode==='bib'}">Biblioteca${DBX?' ('+DBX.exercicios.length+')':''}</button></div>`;
+  const modes=`<div class="seg" role="group" aria-label="Origem dos exercícios"><button data-lm="plano" aria-pressed="${libMode==='plano'}">Essenciais</button><button data-lm="bib" aria-pressed="${libMode==='bib'}">Biblioteca${DBX?' ('+DBX.exercicios.length+')':''}</button></div>`;
   const search=`<input class="search" id="q" type="search" placeholder="${libMode==='bib'?'Buscar por nome, músculo ou aparelho':'Buscar exercício, músculo ou aparelho'}" value="${esc(query)}">`;
   const q=norm(query.trim());
   if(libMode==='plano'){
@@ -879,7 +904,21 @@ const exThumb=x=>x.plan?figure(EXM[x.id],x.id):x.imgs?photo(x.imgs,x.nm):'';
 const exBtn=(x,inner,cls='fig')=>`<button class="${cls}" ${x.plan?`data-ex="${x.id}"`:`data-dbx="${x.id}"`} aria-label="Ver como fazer ${esc(x.nm)}">${inner}</button>`;
 function workoutDef(k){if(PLAN[k])return{nm:PLAN[k].nm,ex:PLAN[k].ex.map(id=>({id}))};return [...TREINOS,...MODELOS].find(t=>t.id===k)||null}
 function wGroups(w){return [...new Set(w.ex.map(e=>exInfo(e.id).gp).filter(Boolean))].slice(0,4)}
-function wCard(w,kind){
+function wCard(w,kind,extra=''){
+  const xs=w.ex.map(e=>exInfo(e.id)),mineLib=kind==='lib'&&(w.autorEmail===ROLE.email||ROLE.admin);
+  const sub=kind==='lib'?`por ${esc(w.autorEmail===ROLE.email?'você':firstName(w.autorNome)||'treinador')} · ${w.ex.length} exercícios`:`${w.ex.length} exercícios${w.obs?' · '+esc(w.obs):''}`;
+  let btns;
+  if(kind==='lib')btns=`<button class="btn wide" data-assign="lib:${w.id}">Atribuir</button><button class="btn ghost wide" data-libcopy="lib:${w.id}">Copiar</button>${mineLib?`<button class="btn ghost wide" data-libedit="${w.id}">Editar</button>`:''}`;
+  else if(kind==='cmod')btns=`<button class="btn wide" data-assign="mod:${w.id}">Atribuir</button><button class="btn ghost wide" data-libcopy="mod:${w.id}">Copiar para a biblioteca</button>`;
+  else if(kind==='snap')btns=`<button class="btn ghost wide" data-snapedit="${w.id}">Ajustar para o atleta</button><button class="btn ghost wide" data-snaprm="${w.id}">Remover</button>`;
+  else btns=`<button class="btn ${session&&session.k===w.id?'':'ghost'} wide" data-start="${w.id}">${session&&session.k===w.id?'Continuar':'Começar'}</button>${kind==='modelo'?`<button class="btn ghost wide" data-copy="${w.id}">Copiar e editar</button>`:''}`;
+  return `<section class="panel stack wk">
+   <div class="row between" style="flex-wrap:nowrap;align-items:flex-start"><div style="min-width:0"><h3 style="font-size:1.35rem">${esc(w.nm)}</h3><div class="muted" style="font-size:.82rem">${sub}</div></div>${kind==='meu'&&CAN_PLAN()?`<button class="btn ghost sm" data-edit="${w.id}">Editar</button>`:''}</div>
+   <div class="thumbs">${xs.slice(0,5).map(x=>`<span class="th">${exThumb(x)}</span>`).join('')}${xs.length>5?`<span class="th more">+${xs.length-5}</span>`:''}</div>
+   <div class="row" style="gap:6px">${wGroups(w).map(g=>`<span class="tag">${esc(g)}</span>`).join('')}${extra}</div>
+   <div class="row" style="flex-wrap:nowrap">${btns}</div></section>`;
+}
+function _oldWCard(w,kind){
   const xs=w.ex.map(e=>exInfo(e.id));
   return `<section class="panel stack wk">
    <div class="row between" style="flex-wrap:nowrap;align-items:flex-start"><div style="min-width:0"><h3 style="font-size:1.35rem">${esc(w.nm)}</h3><div class="muted" style="font-size:.82rem">${w.ex.length} exercícios${w.obs?' · '+esc(w.obs):''}</div></div>${kind==='meu'?`<button class="btn ghost sm" data-edit="${w.id}">Editar</button>`:''}</div>
@@ -892,7 +931,8 @@ function vMontar(){
   const p=presc(weekNo());
   return `<div class="stack">
    <div class="row between"><button class="btn ghost sm" id="edBack">${ic('back',16)} Voltar</button><span class="muted">${edit.ex.length} exercício${edit.ex.length===1?'':'s'}</span></div>
-   <div><div class="eyebrow">Montador de treino</div><h1>${edit.id?'Editar treino':'Novo treino'}</h1></div>
+   <div><div class="eyebrow">${edit.ctx==='lib'?'Biblioteca compartilhada':edit.ctx==='snap'?'Treino de '+esc(firstName(A_CUR&&A_CUR.nome)):'Montador de treino'}</div><h1>${edit.id?'Editar treino':'Novo treino'}</h1></div>
+   ${edit.ctx==='lib'?'<p class="muted" style="font-size:.82rem">Fica visível para todos os treinadores. Só você pode editar.</p>':edit.ctx==='snap'?'<p class="muted" style="font-size:.82rem">Os ajustes valem só para este atleta. O treino da biblioteca não muda.</p>':''}
    <label class="fld" for="edNome">Nome do treino<input id="edNome" value="${esc(edit.nm)}" placeholder="ex.: Treino D, Peito e tríceps" maxlength="40"></label>
    ${edit.ex.length?`<div class="stack" style="gap:10px">${edit.ex.map((e,i)=>{const x=exInfo(e.id);return `<section class="panel edrow">
      ${exBtn(x,exThumb(x),'fig')}
@@ -908,7 +948,7 @@ function vMontar(){
    <button class="btn ghost wide" id="openPick">+ Adicionar exercícios</button>
    <p class="muted" style="font-size:.8rem">Campos em branco seguem a fase atual do plano (${p.sets} × ${p.reps}, descanso de 60 a 90 s).</p>
    <button class="btn wide" id="edSave">Salvar treino</button>
-   ${edit.id?'<button class="btn ghost wide" id="edDel">Excluir treino</button>':''}</div>`;
+   ${edit.id&&edit.ctx!=='snap'?'<button class="btn ghost wide" id="edDel">Excluir treino</button>':''}</div>`;
 }
 const PICK_GRUPOS=()=>['Meu plano',...GRUPOS_ORDEM.filter(g=>DBX&&DBX.exercicios.some(e=>e.grupo===g))];
 function openPick(){
@@ -954,23 +994,24 @@ const SPLITS={2:[['fullA','Full body A'],['fullB','Full body B']],
 const DIAS_SEMANA={2:[1,4],3:[1,3,5],4:[1,2,4,5],5:[1,2,3,4,5],6:[1,2,3,4,5,6]};
 let gen={dias:3,equip:'academia',tempo:45,seed:0,res:null};
 const NIVN={'Iniciante':0,'Intermediário':1,'Avançado':2};
+function genCtx(){if(MODE==='coach'){const a=gen.atleta&&A_CUR&&A_CUR.email===gen.atleta?A_CUR:null;return{a,perfil:(a&&a.perfil)||{nivel:'Iniciante'},hist:a?a.hist:[],sem:a?weekNoFrom(a.inicio):1}}return{a:null,perfil:PERFIL||{},hist:HIST,sem:weekNo()}}
 function genPick(slot,used,dayIds){
   const pool=(POOLS[gen.equip]&&POOLS[gen.equip][slot])||[];
   const n=used[slot]||0;
   for(let i=0;i<pool.length;i++){const id=pool[(n+gen.seed+i)%pool.length];if(!dayIds.has(id)){used[slot]=n+1;return id}}
   if(!DBX)return null;
   const allow={academia:null,halteres:['Halteres','Peso corporal','Elástico'],casa:['Peso corporal','Elástico']}[gen.equip];
-  const lim=NIVN[(PERFIL&&PERFIL.nivel)||'Iniciante'];
+  const lim=NIVN[genCtx().perfil.nivel||'Iniciante'];
   const c=DBX.exercicios.filter(e=>e.categoria==='Musculação'&&e.impacto==='baixo'&&e.grupo===SLOT_NM[slot]&&(!allow||allow.includes(e.equipamento))&&NIVN[e.nivel]<=lim&&!dayIds.has(e.id));
   return c.length?c[(n+gen.seed)%c.length].id:null;
 }
 function genPresc(slot,id){
-  const forca=PERFIL&&PERFIL.objetivo==='Ganhar força',ini=weekNo()<=2,comp=COMPOSTO.has(slot);
+  const C=genCtx(),forca=C.perfil.objetivo==='Ganhar força',ini=C.sem<=2,comp=COMPOSTO.has(slot);
   const series=ini?2:(forca&&comp?4:3);
   let reps=forca?(comp?'6 a 10':'10 a 12'):(comp?'10 a 12':'12 a 15'),desc=forca?(comp?120:75):(comp?90:60);
   if(slot==='core'){const isom=['Plank','Side_Bridge'].includes(id);reps=isom?'20 a 40 s':['Dead_Bug','Pallof_Press'].includes(id)?'8 por lado':'12 a 15';desc=45}
   if(slot==='lombar'){reps='12 a 15';desc=60}
-  const last=lastSets(id),kg=last?Math.max(...last.map(x=>num(x.kg)).filter(v=>v!==null),0):0;
+  const last=lastSetsIn(C.hist,id),kg=last?Math.max(...last.map(x=>num(x.kg)).filter(v=>v!==null),0):0;
   return{series,reps,desc,carga:kg?String(kg):''};
 }
 function generate(){
@@ -983,11 +1024,13 @@ function generate(){
 }
 function vGerar(){
   const opt=(k,v,l)=>`<button class="chip" data-gk="${k}" data-gv="${v}" aria-pressed="${gen[k]==v}">${l}</button>`;
-  const P=PERFIL||{};
+  const C=genCtx(),P=C.perfil,co=MODE==='coach';
   return `<div class="stack">
-   <div class="row between"><button class="btn ghost sm" id="gBack">${ic('back',16)} Voltar</button><span class="muted">${esc(P.objetivo||'')} · ${esc(P.nivel||'Iniciante')}</span></div>
-   <div><div class="eyebrow">Gerador automático</div><h1>Montar meu programa</h1></div>
-   <section class="panel stack"><span class="eyebrow">Dias de musculação por semana</span><div class="chips">${[2,3,4,5,6].map(d=>opt('dias',d,d+' dias')).join('')}</div>
+   <div class="row between"><button class="btn ghost sm" id="gBack">${ic('back',16)} Voltar</button><span class="muted">${esc(P.objetivo||'')}${P.objetivo?' · ':''}${esc(P.nivel||'Iniciante')}</span></div>
+   <div><div class="eyebrow">Gerador automático</div><h1>${co?'Gerar programa':'Montar meu programa'}</h1></div>
+   <section class="panel stack">
+    ${co?`<label class="fld" for="genAtlSel">Para qual atleta<select id="genAtlSel"><option value="">Nenhum, só salvar na biblioteca</option>${COACH.atletas.map(a=>`<option value="${esc(a.email)}" ${gen.atleta===a.email?'selected':''}>${esc(a.nome)}</option>`).join('')}</select></label>
+     ${C.a?`<p class="muted" style="font-size:.8rem">Usa o objetivo, o nível e as últimas cargas de ${esc(firstName(C.a.nome))}.${C.a.obs?' Restrições: '+esc(C.a.obs):''}</p>`:''}`:''}<span class="eyebrow">Dias de musculação por semana</span><div class="chips">${[2,3,4,5,6].map(d=>opt('dias',d,d+' dias')).join('')}</div>
     <span class="eyebrow">Onde você vai treinar</span><div class="chips" style="flex-wrap:wrap">${opt('equip','academia','Academia completa')}${opt('equip','halteres','Só halteres')}${opt('equip','casa','Em casa (corpo e elástico)')}</div>
     <span class="eyebrow">Tempo por treino</span><div class="chips">${[30,45,60].map(t=>opt('tempo',t,t+' min')).join('')}</div>
     <p class="muted" style="font-size:.82rem">${gen.dias<=3?'Divisão full body: corpo todo em cada treino, ideal para começar.':gen.dias===4?'Divisão superior e inferior, duas vezes cada.':gen.dias===5?'Um grupo muscular principal por dia, mais um full body.':'Empurrar, puxar e pernas, duas vezes na semana.'} Só exercícios de baixo impacto${gen.tempo===30?', com bi-sets para caber em 30 minutos':''}.</p>
@@ -995,18 +1038,29 @@ function vGerar(){
    ${gen.res?`${gen.res.map((w,i)=>`<section class="panel stack wk">
      <div class="row between" style="flex-wrap:nowrap"><div><div class="eyebrow">${AB[DIAS_SEMANA[gen.dias][i]]} · ~${estMin(w)} min</div><h3 style="font-size:1.35rem">${esc(w.nm)}</h3></div></div>
      <div class="stack" style="gap:6px">${w.ex.map((e,j)=>{const x=exInfo(e.id);return `<div class="glist"><span class="th">${exThumb(x)}</span><div style="min-width:0"><b>${esc(x.nm)}</b><div class="muted" style="font-size:.76rem">${e.series} × ${esc(e.reps)} · ${e.desc}s${e.carga?' · '+e.carga+' kg':''}${e.metodo==='biset'?' · <span class="acc">bi-set com o próximo</span>':''}</div></div></div>`}).join('')}</div></section>`).join('')}
-    <p class="muted" style="font-size:.82rem">Ao salvar, estes treinos substituem os gerados antes. Os que você montou à mão continuam. Dá para editar cada um depois.</p>
+    ${co?`<p class="muted" style="font-size:.82rem">Os treinos vão para a biblioteca compartilhada${C.a?`. Ao enviar, substituem os treinos gerados antes para ${esc(firstName(C.a.nome))} e montam a semana dele`:''}.</p>
+     ${C.a?`<button class="btn wide" id="gSaveAg">Salvar e enviar para ${esc(firstName(C.a.nome))}</button><button class="btn ghost wide" id="gSave">Só salvar na biblioteca</button>`:`<button class="btn wide" id="gSave">Salvar na biblioteca</button>`}`
+    :`<p class="muted" style="font-size:.82rem">Ao salvar, estes treinos substituem os gerados antes. Os que você montou à mão continuam. Dá para editar cada um depois.</p>
     <button class="btn wide" id="gSaveAg">Salvar e colocar na minha semana</button>
-    <button class="btn ghost wide" id="gSave">Só salvar em Meus treinos</button>`:''}</div>`;
+    <button class="btn ghost wide" id="gSave">Só salvar em Meus treinos</button>`}`:''}</div>`;
 }
 function estMin(w){const p=presc(weekNo());return Math.round(w.ex.reduce((a,e)=>{const n=+e.series||p.sets,r=+e.desc||75;return a+n*(40+(e.metodo==='biset'?0:r))},0)/60)+5}
-function saveGen(toAgenda){
+const exClean=e=>{const o={id:e.id,series:e.series,reps:e.reps,desc:e.desc};if(e.carga)o.carga=e.carga;if(e.metodo)o.metodo=e.metodo;return o};
+function genAgenda(ids){const ag=['leve','cardio','cardio','cardio','cardio','cardio','cardio'];const gym=DIAS_SEMANA[ids.length];gym.forEach((d,i)=>ag[d]=ids[i]);
+  let c=0;for(let d=1;d<7;d++){if(!gym.includes(d)){if(c>=4)ag[d]='descanso';else c++}}if(ids.length>=6)ag[0]='descanso';return ag}
+async function saveGenCoach(send){
+  const C=genCtx(),a=C.a,stamp=Date.now().toString(36),suf=a?' · '+firstName(a.nome):'',libs=[];
+  try{for(const [i,w] of gen.res.entries())libs.push(await CDB.saveTreino({id:'t'+stamp+i,nm:w.nm+suf,gen:true,ex:w.ex.map(exClean)}));
+    if(send&&a){const snaps=libs.map(l=>snapOf(l,l.id));const treinos=(a.treinos||[]).filter(t=>!t.gen).concat(snaps);
+      await CDB.saveAtleta(a.email,{treinos,agenda:genAgenda(snaps.map(x=>x.id))})}
+  }catch(e){return}
+  gen.res=null;if(send&&a){aTab='semana';go('atleta');toast('Programa enviado para '+firstName(a.nome))}else{libTab='meus';go('biblioteca');toast('Treinos salvos na biblioteca')}
+}
+function saveGen(toAgenda){if(MODE==='coach'){saveGenCoach(toAgenda);return}
   const stamp=Date.now(),old=new Set(TREINOS.filter(t=>t.gen).map(t=>t.id));
-  const novos=gen.res.map((w,i)=>({id:'g'+stamp+i,nm:w.nm,gen:true,ex:w.ex.map(e=>{const o={id:e.id,series:e.series,reps:e.reps,desc:e.desc};if(e.carga)o.carga=e.carga;if(e.metodo)o.metodo=e.metodo;return o})}));
+  const novos=gen.res.map((w,i)=>({id:'g'+stamp+i,nm:w.nm,gen:true,ex:w.ex.map(exClean)}));
   TREINOS=TREINOS.filter(t=>!t.gen).concat(novos);DB.treinos(TREINOS);
-  if(toAgenda){const ag=['leve','cardio','cardio','cardio','cardio','cardio','cardio'];DIAS_SEMANA[gen.dias].forEach((d,i)=>ag[d]=novos[i].id);
-    const gymDays=DIAS_SEMANA[gen.dias];let cardios=0;for(let d=1;d<7;d++){if(!gymDays.includes(d)){if(cardios>=4)ag[d]='descanso';else cardios++}}
-    if(gen.dias>=6)ag[0]='descanso';AGENDA=ag;DB.agenda(AGENDA)}
+  if(toAgenda){AGENDA=genAgenda(novos.map(x=>x.id));DB.agenda(AGENDA)}
   else{const ag=[...agenda()];ag.forEach((k,i)=>{if(old.has(k))ag[i]='descanso'});if(AGENDA){AGENDA=ag;DB.agenda(AGENDA)}}
   if(session&&old.has(session.k)){session=null;DB.draft(null)}
   gen.res=null;tView=toAgenda?'semana':'meus';go('treinos');toast(toAgenda?'Programa salvo e colocado na semana':'Treinos salvos')
@@ -1080,11 +1134,19 @@ function openEx(id){
   $('#sh').addEventListener('click',ev=>{if(ev.target.id==='sh'||ev.target.id==='shx')$('#layer').innerHTML=''});
 }
 function openCfg(){
+  if(MODE==='coach'){$('#layer').innerHTML=`<div class="sheet" id="sh" role="dialog" aria-modal="true" aria-label="Ajustes"><div class="in">
+   <div class="row between"><h2>Ajustes</h2><button class="btn ghost sm" id="shx">Fechar</button></div>
+   <p class="muted" style="font-size:.85rem">Conectado como ${esc(ROLE.email)} · ${ROLE.admin?'Administrador':'Treinador'}</p>
+   ${ROLE.atleta?`<button class="btn ghost wide" id="toAtleta">${ic('dumb',18)} Abrir meu treino</button>`:''}
+   ${isStandalone()?'':'<button class="btn wide" id="cfgInstall">Instalar o app no celular</button>'}
+   <button class="btn ghost wide" id="logout">Sair da conta</button></div></div>`;
+   $('#sh').addEventListener('click',ev=>{if(ev.target.id==='sh'||ev.target.id==='shx')$('#layer').innerHTML=''});return}
   $('#layer').innerHTML=`<div class="sheet" id="sh" role="dialog" aria-modal="true" aria-label="Ajustes"><div class="in">
    <div class="row between"><h2>Ajustes</h2><button class="btn ghost sm" id="shx">Fechar</button></div>
    <label class="fld" for="startIn">Início do plano<input type="date" id="startIn" value="${start}"></label>
    <div class="stack" style="gap:8px"><span class="eyebrow">Objetivo</span><div class="chips" style="flex-wrap:wrap">${OBJ.map(o=>`<button class="chip" data-cobj="${o[0]}" aria-pressed="${PERFIL&&PERFIL.objetivo===o[0]}">${o[0]}</button>`).join('')}</div></div>
    <p class="muted" style="font-size:.85rem">${USER?`Conectado como ${esc(USER.email)}. Seus dados ficam salvos na sua conta.`:'Modo local: os dados ficam só neste navegador.'}</p>
+   ${ROLE.treinador?`<button class="btn ghost wide" id="toCoach">${ic('body',18)} Abrir painel do treinador</button>`:''}
    ${isStandalone()?'':'<button class="btn wide" id="cfgInstall">Instalar o app no celular</button>'}
    ${DB.online?'<button class="btn ghost wide" id="logout">Sair da conta</button>':''}</div></div>`;
   $('#sh').addEventListener('click',ev=>{if(ev.target.id==='sh'||ev.target.id==='shx')$('#layer').innerHTML=''});
@@ -1124,10 +1186,270 @@ function openInstallHelp(){
   $('#sh').addEventListener('click',ev=>{if(ev.target.id==='sh'||ev.target.id==='shx')$('#layer').innerHTML=''});
 }
 
+/* =====================================================================
+   PAINEL DO TREINADOR
+   Papéis: administrador (DONO), treinador (treinadores/{email} ativo) e atleta (atletas/{email}).
+   Treinos da biblioteca ficam em treinos/{id}, visíveis para todos os treinadores; só o autor edita.
+   O atleta recebe cópias (snapshots) dos treinos em atletas/{email}.treinos e a semana em .agenda.
+   ===================================================================== */
+let MODE='atleta',ROLE={admin:false,treinador:false,atleta:false,email:'',nome:''},ATL=null;
+const COACH={atletas:[],treinos:[],treinadores:[],loaded:false};
+let A_CUR=null,aTab='semana',libTab='todos',libQ='',libShowT=10,atlQ='',aHistShow=8,aProgEx=null,atlEdit=null,treEdit=null;
+const fsdb=()=>firebase.firestore();
+const IDADE=n=>{if(!n)return null;const d=new Date(n+'T12:00'),h=new Date();let a=h.getFullYear()-d.getFullYear();if(h<new Date(h.getFullYear(),d.getMonth(),d.getDate()))a--;return a>0&&a<120?a:null};
+const firstName=n=>String(n||'').trim().split(/\s+/)[0]||'';
+const SELF_COACH=()=>MODE==='atleta'&&ROLE.treinador&&ATL&&(ROLE.admin||ATL.treinadorEmail===ROLE.email);
+const CAN_PLAN=()=>!DB.online||SELF_COACH();
+const agoDias=ts=>{if(!ts)return null;const d=Math.floor((Date.now()-ts)/DAY);return d<=0?'hoje':d===1?'ontem':`há ${d} dias`};
+function lastSetsIn(hist,id){for(const h of hist||[]){if(h.det){const f=h.det.find(x=>x.id===id);if(f&&f.sets.some(s=>s.kg))return f.sets}}return null}
+function exSeriesIn(hist,id){const out=[];[...(hist||[])].reverse().forEach(h=>{if(!h.det)return;const d=h.det.find(x=>x.id===id);if(!d)return;const ks=d.sets.map(s=>num(s.kg)).filter(v=>v!==null);if(ks.length)out.push({lab:fmtD(tsOf(h)),y:Math.max(...ks)})});return out}
+function weekNoFrom(ini){if(!ini)return 1;const s=isoDay(ini+'T00:00'),n=isoDay(new Date());return Math.max(1,Math.floor((n-s)/(7*DAY))+1)}
+const cleanW=w=>JSON.parse(JSON.stringify({nm:w.nm,obs:w.obs||null,gen:!!w.gen,ex:w.ex}));
+function snapOf(w,origem){return{...cleanW(w),id:'s'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),origem:origem||null,atualizado:w.atualizado||Date.now()}}
+function libDef(ref){ // 'lib:<id>' | 'mod:<id>' | 'plan:A'
+  const [k,id]=ref.split(':');
+  if(k==='lib')return COACH.treinos.find(t=>t.id===id);
+  if(k==='mod')return MODELOS.find(t=>t.id===id);
+  if(k==='plan'&&PLAN[id])return{id:'plan_'+id,nm:PLAN[id].nm,ex:PLAN[id].ex.map(x=>({id:x}))};
+  return null;
+}
+
+/* ---------- dados do treinador ---------- */
+const CDB={
+  async loadAll(){
+    const me=ROLE.email,qs=[fsdb().collection('treinos').get(),
+      ROLE.admin?fsdb().collection('atletas').get():fsdb().collection('atletas').where('treinadorEmail','==',me).get()];
+    if(ROLE.admin)qs.push(fsdb().collection('treinadores').get());
+    const [t,a,tr]=await Promise.all(qs);
+    COACH.treinos=t.docs.map(d=>({...d.data(),id:d.id})).sort((x,y)=>(y.atualizado||0)-(x.atualizado||0));
+    COACH.atletas=a.docs.map(d=>({...d.data(),email:d.id})).sort((x,y)=>String(x.nome).localeCompare(String(y.nome),'pt'));
+    COACH.treinadores=tr?tr.docs.map(d=>({...d.data(),email:d.id})).sort((x,y)=>String(x.nome).localeCompare(String(y.nome),'pt')):[];
+    COACH.loaded=true;
+  },
+  async atleta(email){
+    const r=fsdb().collection('atletas').doc(email);
+    const [d,h,m]=await Promise.all([r.get(),r.collection('historico').orderBy('ts','desc').limit(300).get(),r.collection('medidas').orderBy('ts','desc').limit(300).get()]);
+    if(!d.exists)throw new Error('não encontrado');
+    A_CUR={...d.data(),email,hist:h.docs.map(x=>x.data()),med:m.docs.map(x=>x.data()).sort(byTs)};
+    const i=COACH.atletas.findIndex(x=>x.email===email);if(i>=0)COACH.atletas[i]={...COACH.atletas[i],...d.data()};
+    return A_CUR;
+  },
+  saveAtleta(email,data){const i=COACH.atletas.findIndex(x=>x.email===email);if(i>=0)Object.assign(COACH.atletas[i],data);if(A_CUR&&A_CUR.email===email)Object.assign(A_CUR,data);
+    return fsdb().collection('atletas').doc(email).set(data,{merge:true}).catch(e=>{toast('Não foi possível salvar. Verifique a internet.');throw e})},
+  saveTreino(w){const now=Date.now(),doc={...cleanW(w),autorEmail:w.autorEmail||ROLE.email,autorNome:w.autorNome||ROLE.nome,criado:w.criado||now,atualizado:now};
+    const i=COACH.treinos.findIndex(x=>x.id===w.id);const full={...doc,id:w.id};if(i>=0)COACH.treinos[i]=full;else COACH.treinos.unshift(full);
+    return fsdb().collection('treinos').doc(w.id).set(doc).then(()=>full).catch(e=>{toast('Não foi possível salvar o treino.');throw e})},
+  delTreino(id){COACH.treinos=COACH.treinos.filter(t=>t.id!==id);return fsdb().collection('treinos').doc(id).delete()},
+  async delAtleta(email){const r=fsdb().collection('atletas').doc(email);
+    for(const c of ['historico','medidas']){const s=await r.collection(c).get();await Promise.all(s.docs.map(d=>d.ref.delete()))}
+    await r.delete();COACH.atletas=COACH.atletas.filter(a=>a.email!==email)},
+  saveTreinador(email,data){const i=COACH.treinadores.findIndex(x=>x.email===email);if(i>=0)Object.assign(COACH.treinadores[i],data);else COACH.treinadores.push({...data,email});
+    return fsdb().collection('treinadores').doc(email).set(data,{merge:true})},
+  delTreinador(email){COACH.treinadores=COACH.treinadores.filter(t=>t.email!==email);return fsdb().collection('treinadores').doc(email).delete()}
+};
+function assignTo(atl,w,origem){const s=snapOf(w,origem);const list=[...(atl.treinos||[]),s];return CDB.saveAtleta(atl.email,{treinos:list}).then(()=>s)}
+
+/* ---------- telas do treinador ---------- */
+function coachHeader(eyebrow,title){
+  return `<div class="top"><div class="hello"><div class="eyebrow">${eyebrow}</div><h2>${title}</h2></div><button class="iconbtn" id="openCfg" aria-label="Ajustes">${ic('gear')}</button></div>`;
+}
+function vAtletas(){
+  const q=norm(atlQ.trim()),list=COACH.atletas.filter(a=>!q||norm(a.nome+' '+a.email).includes(q));
+  const tr=e=>{const t=COACH.treinadores.find(x=>x.email===e);return e===ROLE.email?'você':t?firstName(t.nome):e};
+  return `<div class="stack">${coachHeader(ROLE.admin?'Administrador · Painel do treinador':'Painel do treinador','Atletas')}
+   ${ROLE.atleta?`<button class="btn ghost wide" id="toAtleta">${ic('dumb',18)} Abrir meu treino</button>`:''}
+   <div class="stats"><div><b>${COACH.atletas.length}</b><span>atletas</span></div><div><b>${COACH.atletas.filter(a=>a.ultimo&&Date.now()-a.ultimo.ts<7*DAY).length}</b><span>treinaram na semana</span></div><div><b>${COACH.treinos.length}</b><span>treinos na biblioteca</span></div></div>
+   ${COACH.atletas.length>4?`<input class="search" id="atlQ" type="search" placeholder="Buscar atleta" value="${esc(atlQ)}">`:''}
+   ${list.length?list.map(a=>{const P=a.perfil||{},dias=(a.agenda||[]).filter(k=>k&&!['descanso','cardio','leve'].includes(k)).length;
+     return `<button class="panel atl" data-atl="${esc(a.email)}"><span class="av">${esc(firstName(a.nome).slice(0,1).toUpperCase()||'?')}</span>
+      <span style="min-width:0;display:grid;gap:3px"><b>${esc(a.nome||a.email)}</b><span class="muted" style="font-size:.78rem">${esc(P.objetivo||'Sem objetivo')} · ${esc(P.nivel||'Iniciante')}${ROLE.admin?' · treinador: '+esc(tr(a.treinadorEmail)):''}</span>
+      <span style="font-size:.8rem">${a.ultimo?`Último: ${esc(a.ultimo.nm)} · <span class="${Date.now()-a.ultimo.ts>5*DAY?'warnc':'acc'}">${agoDias(a.ultimo.ts)}</span>`:'<span class="muted">Ainda sem treino registrado</span>'}</span></span>
+      <span class="pill ${dias?'ok':'none'}">${dias?dias+'x/semana':'sem semana'}</span></button>`}).join('')
+    :`<div class="panel empty"><h3>${COACH.atletas.length?'Nenhum atleta encontrado':'Nenhum atleta cadastrado'}</h3><p>Cadastre o atleta com o e-mail Google dele. Ele entra no MeuTreino com esse e-mail e já vê os treinos que você montar.</p></div>`}
+   <button class="btn wide" id="newAtl">+ Cadastrar atleta</button></div>`;
+}
+function vAtlForm(){
+  const a=atlEdit,P=a.perfil||{},isNew=!a.email0;
+  const sel=(id,opts,v)=>`<select id="${id}">${opts.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('')}</select>`;
+  return `<div class="stack">
+   <div class="row between"><button class="btn ghost sm" id="afBack">${ic('back',16)} Voltar</button></div>
+   <div><div class="eyebrow">${isNew?'Novo atleta':'Editar ficha'}</div><h1>${isNew?'Cadastrar atleta':esc(a.nome)}</h1></div>
+   <section class="panel stack">
+    <label class="fld" for="afNome">Nome completo<input id="afNome" maxlength="60" value="${esc(a.nome||'')}" placeholder="ex.: Maria Souza"></label>
+    <label class="fld" for="afEmail">E-mail Google do atleta<input id="afEmail" type="email" inputmode="email" autocomplete="off" maxlength="80" value="${esc(a.email0||a.email||'')}" ${isNew?'':'disabled'} placeholder="nome@gmail.com"></label>
+    ${isNew?'<p class="muted" style="font-size:.8rem">É com esse e-mail que o atleta entra no app. Não dá para trocar depois.</p>':''}
+    <div class="fields" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+     <label class="fld" for="afNasc">Nascimento<input id="afNasc" type="date" value="${esc(a.nascimento||'')}"></label>
+     <label class="fld" for="afAlt">Altura (cm)<input id="afAlt" inputmode="numeric" value="${esc(a.altura||'')}" placeholder="ex.: 178"></label>
+     <label class="fld" for="afPeso">${isNew?'Peso atual (kg)':'Peso inicial (kg)'}<input id="afPeso" inputmode="decimal" value="${esc(P.pesoInicial||'')}" placeholder="ex.: 92,5"></label>
+     <label class="fld" for="afIni">Início do plano<input id="afIni" type="date" value="${esc(a.inicio||P.inicio||ymd(new Date()))}"></label>
+     <label class="fld" for="afObj">Objetivo${sel('afObj',OBJ.map(o=>o[0]),P.objetivo||'Saúde geral')}</label>
+     <label class="fld" for="afNiv">Nível${sel('afNiv',['Iniciante','Intermediário','Avançado'],P.nivel||'Iniciante')}</label></div>
+    <label class="fld" for="afObs">Restrições e observações<textarea id="afObs" rows="3" maxlength="400" placeholder="ex.: dor no joelho direito, usa semaglutida, liberado pelo médico em 10/10">${esc(a.obs||'')}</textarea></label>
+   </section>
+   <button class="btn wide" id="afSave">${isNew?'Cadastrar atleta':'Salvar ficha'}</button>
+   ${isNew?'':`<button class="btn ghost wide" id="afDel">Excluir atleta</button>`}</div>`;
+}
+function atlAgendaSelect(a,wd){
+  const k=(a.agenda||[])[wd]||'descanso',ts=a.treinos||[];
+  return `<label class="agrow" for="aag-${wd}"><span>${AB[wd]}</span><select id="aag-${wd}" data-aag="${wd}">
+   <optgroup label="Atividade"><option value="descanso" ${k==='descanso'?'selected':''}>Descanso</option><option value="cardio" ${k==='cardio'?'selected':''}>Cardio</option><option value="leve" ${k==='leve'?'selected':''}>Caminhada leve</option></optgroup>
+   ${ts.length?`<optgroup label="Treinos do atleta">${ts.map(t=>`<option value="${t.id}" ${k===t.id?'selected':''}>${esc(t.nm)}</option>`).join('')}</optgroup>`:''}
+   ${COACH.treinos.length?`<optgroup label="Atribuir da biblioteca">${COACH.treinos.map(t=>`<option value="lib:${t.id}">+ ${esc(t.nm)}</option>`).join('')}</optgroup>`:''}
+   <optgroup label="Atribuir modelo pronto">${MODELOS.map(t=>`<option value="mod:${t.id}">+ ${esc(t.nm)}</option>`).join('')}</optgroup></select></label>`;
+}
+function vAtleta(){
+  const a=A_CUR;if(!a)return `<div class="empty">Carregando atleta...</div>`;
+  const P=a.perfil||{},idade=IDADE(a.nascimento),wk=weekNoFrom(a.inicio||P.inicio);
+  const segs=[['semana','Semana'],['treinos','Treinos'],['progresso','Progresso'],['ficha','Ficha']];
+  let body='';
+  if(aTab==='semana'){
+    body=`<section class="panel stack"><div class="sec-h"><h3>Semana do atleta</h3><span class="muted" style="font-size:.78rem">salva ao escolher</span></div>
+     <div class="stack" style="gap:8px">${[1,2,3,4,5,6,0].map(wd=>atlAgendaSelect(a,wd)).join('')}</div>
+     <p class="muted" style="font-size:.8rem">Escolher um treino da biblioteca ou um modelo já envia uma cópia para o atleta. O atleta vê a semana na tela Hoje.</p></section>
+     <button class="btn ghost wide" id="genAtl">${ic('bolt',18)} Gerar programa para ${esc(firstName(a.nome))}</button>`;
+  }else if(aTab==='treinos'){
+    const ts=a.treinos||[];
+    body=`${ts.length?ts.map(t=>{const lib=t.origem&&COACH.treinos.find(x=>x.id===t.origem),novo=lib&&(lib.atualizado||0)>(t.atualizado||0),uso=(a.agenda||[]).map((k,i)=>k===t.id?AB[i]:null).filter(Boolean);
+      return wCard(t,'snap',`${uso.length?`<span class="pill ok">${uso.join(', ')}</span>`:'<span class="pill none">fora da semana</span>'}${novo?` <button class="link" data-snapup="${t.id}">Atualizar para a versão nova da biblioteca</button>`:''}`)}).join('')
+      :`<div class="panel empty"><h3>Nenhum treino atribuído</h3><p>Atribua treinos da biblioteca, um modelo pronto, ou gere um programa completo para este atleta.</p></div>`}
+     <button class="btn wide" id="assignOpen">+ Atribuir treino</button>
+     <button class="btn ghost wide" id="genAtl">${ic('bolt',18)} Gerar programa para ${esc(firstName(a.nome))}</button>`;
+  }else if(aTab==='progresso'){
+    const h=a.hist||[],m=a.med||[],d30=Date.now()-30*DAY;
+    const tr30=h.filter(x=>x.det&&tsOf(x)>=d30).length,car30=h.filter(x=>x.min&&tsOf(x)>=d30).reduce((s,x)=>s+x.min,0);
+    const pes=[...m].reverse().filter(x=>x.peso),ini=num(P.pesoInicial)||(pes[0]&&pes[0].peso),atual=pes.length?pes[pes.length-1].peso:null,dif=atual!==null&&ini?atual-ini:null;
+    const ids=[...new Set(h.filter(x=>x.det).flatMap(x=>x.det.map(d=>d.id)))].filter(id=>exSeriesIn(h,id).length);
+    if(!aProgEx||!ids.includes(aProgEx))aProgEx=ids[0]||null;
+    const ws=[...Array(8)].map((_,i)=>{const st=weekStart(new Date(Date.now()-(7-i)*7*DAY));return{lab:fmtD(st),v:h.filter(x=>x.det&&tsOf(x)>=st&&tsOf(x)<st+7*DAY).length}});
+    body=`<div class="stats"><div><b>${tr30}</b><span>treinos em 30 dias</span></div><div><b>${car30}</b><span>min de cardio em 30 dias</span></div><div><b class="${dif<0?'up':dif>0?'down':''}">${dif===null?'--':(dif>0?'+':'')+br(dif)}</b><span>kg desde o início</span></div></div>
+     <section class="panel stack"><div><div class="eyebrow">Frequência</div><h3>Treinos por semana</h3></div>${barChart(ws)}</section>
+     <section class="panel stack"><div><div class="eyebrow">Evolução</div><h3>Peso corporal</h3></div>${pes.length?lineChart(pes.map(x=>({lab:fmtD(tsOf(x)),y:x.peso})),{unit:'kg'}):'<div class="empty">Nenhum peso registrado ainda.</div>'}</section>
+     ${ids.length?`<section class="panel stack"><div><div class="eyebrow">Carga máxima por treino</div><h3>${esc(exInfo(aProgEx).nm)}</h3></div>
+       <div class="chips">${ids.map(id=>`<button class="chip" data-apex="${id}" aria-pressed="${id===aProgEx}">${esc(exInfo(id).nm)}</button>`).join('')}</div>${lineChart(exSeriesIn(h,aProgEx),{unit:'kg'})}</section>`:''}
+     <section class="panel" style="padding-block:4px">${h.length?h.slice(0,aHistShow).map(x=>{const dt=new Date(tsOf(x));
+       const sub=x.det?x.det.map(d=>{const b=d.sets.map(s=>num(s.kg)).filter(v=>v!==null);return b.length?`${esc(exInfo(d.id).nm)} ${br(Math.max(...b),0)} kg`:null}).filter(Boolean).slice(0,3).join(' · ')||'Sem cargas anotadas':(EXM[x.mod]?EXM[x.mod].nm:'Cardio');
+       return `<div class="hist"><div class="d">${dt.getDate()}<small>${dt.toLocaleDateString('pt-BR',{month:'short'}).replace('.','')}</small></div><div style="min-width:0"><b>${esc(x.nm)}</b>${x.min?` <span class="tag">${x.min} min</span>`:''}<div class="muted" style="font-size:.82rem;overflow-wrap:anywhere">${sub}</div></div></div>`}).join(''):'<div class="empty">O atleta ainda não registrou treinos.</div>'}</section>
+     ${h.length>aHistShow?`<button class="btn ghost wide" id="aMoreHist">Ver mais (${h.length-aHistShow})</button>`:''}`;
+  }else{
+    const row=(l,v)=>`<div class="frow"><span class="muted">${l}</span><b>${v}</b></div>`;
+    body=`<section class="panel stack" style="gap:2px">${row('E-mail',esc(a.email))}${row('Idade',idade?idade+' anos':'--')}${row('Altura',a.altura?esc(a.altura)+' cm':'--')}${row('Peso inicial',P.pesoInicial?br(P.pesoInicial)+' kg':'--')}${row('Objetivo',esc(P.objetivo||'--'))}${row('Nível',esc(P.nivel||'--'))}${row('Início do plano',a.inicio?new Date(a.inicio+'T12:00').toLocaleDateString('pt-BR'):'--')}</section>
+     ${a.obs?`<section class="panel"><div class="eyebrow">Restrições e observações</div><p style="margin-top:6px;white-space:pre-wrap">${esc(a.obs)}</p></section>`:''}
+     <button class="btn wide" id="atlEditBtn">Editar ficha</button>`;
+  }
+  return `<div class="stack">
+   <div class="row between"><button class="btn ghost sm" id="aBack">${ic('back',16)} Atletas</button><span class="muted" style="font-size:.8rem">Semana ${wk} do plano</span></div>
+   <div class="row" style="flex-wrap:nowrap;gap:14px"><span class="av lg">${esc(firstName(a.nome).slice(0,1).toUpperCase())}</span><div style="min-width:0"><h2 style="text-transform:none">${esc(a.nome)}</h2>
+    <div class="muted" style="font-size:.82rem">${[idade?idade+' anos':null,P.objetivo,P.nivel].filter(Boolean).map(esc).join(' · ')}</div></div></div>
+   ${a.obs?`<div class="warn" style="font-size:.82rem"><b>Atenção:</b> ${esc(a.obs.length>140?a.obs.slice(0,140)+'...':a.obs)}</div>`:''}
+   <div class="seg" role="group" aria-label="Seções do atleta">${segs.map(s=>`<button data-at="${s[0]}" aria-pressed="${aTab===s[0]}">${s[1]}</button>`).join('')}</div>${body}</div>`;
+}
+function vBiblioteca(){
+  const q=norm(libQ.trim()),mine=t=>t.autorEmail===ROLE.email;
+  let list=libTab==='modelos'?MODELOS:COACH.treinos.filter(t=>libTab!=='meus'||mine(t));
+  if(q)list=list.filter(t=>norm(t.nm+' '+(t.autorNome||'')+' '+t.ex.map(e=>exInfo(e.id).nm).join(' ')).includes(q));
+  return `<div class="stack">${coachHeader('Compartilhada entre todos os treinadores','Biblioteca')}
+   <div class="seg" role="group" aria-label="Filtro da biblioteca">${[['todos','Todos ('+COACH.treinos.length+')'],['meus','Meus'],['modelos','Modelos']].map(x=>`<button data-lt="${x[0]}" aria-pressed="${libTab===x[0]}">${x[1]}</button>`).join('')}</div>
+   <div class="row" style="flex-wrap:nowrap"><button class="btn wide" id="newLib">+ Montar treino</button><button class="btn ghost wide" id="genLib">${ic('bolt',18)} Gerar programa</button></div>
+   <input class="search" id="libQ" type="search" placeholder="Buscar por nome, exercício ou autor" value="${esc(libQ)}">
+   ${list.length?list.slice(0,libShowT).map(t=>wCard(t,libTab==='modelos'?'cmod':'lib')).join(''):`<div class="panel empty"><h3>${libTab==='meus'?'Você ainda não montou treinos':'Nada encontrado'}</h3><p>Os treinos que qualquer treinador montar aparecem aqui para todos usarem.</p></div>`}
+   ${list.length>libShowT?`<button class="btn ghost wide" id="moreLibT">Ver mais (${list.length-libShowT})</button>`:''}</div>`;
+}
+function vEquipe(){
+  return `<div class="stack">${coachHeader('Administrador','Equipe')}
+   <section class="panel stack"><h3>Treinadores</h3>
+    <div class="trow"><span style="min-width:0"><b>${esc(ROLE.nome||'Você')}</b><div class="muted" style="font-size:.78rem">${esc(ROLE.email)}</div></span><span class="pill ok">Administrador</span></div>
+    ${COACH.treinadores.map(t=>`<div class="trow"><span style="min-width:0"><b>${esc(t.nome||t.email)}</b><div class="muted" style="font-size:.78rem">${esc(t.email)} · ${COACH.atletas.filter(a=>a.treinadorEmail===t.email).length} atletas</div></span>
+      <span class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn ghost sm" data-trtog="${esc(t.email)}">${t.ativo?'Bloquear':'Liberar'}</button><button class="btn ghost sm" data-trdel="${esc(t.email)}">Remover</button></span>
+      ${t.ativo?'':'<span class="pill low" style="grid-column:1/-1;justify-self:start">bloqueado</span>'}</div>`).join('')}
+   </section>
+   <section class="panel stack"><h3>Cadastrar treinador</h3>
+    <label class="fld" for="trNome">Nome<input id="trNome" maxlength="60" placeholder="ex.: Carlos Lima"></label>
+    <label class="fld" for="trEmail">E-mail Google<input id="trEmail" type="email" inputmode="email" maxlength="80" placeholder="nome@gmail.com"></label>
+    <p class="muted" style="font-size:.8rem">O treinador entra no MeuTreino com esse e-mail, cadastra os próprios atletas e usa a biblioteca compartilhada.</p>
+    <button class="btn wide" id="trAdd">Cadastrar treinador</button></section>
+   <section class="panel stack"><h3>Meu treino pessoal</h3>
+    ${ROLE.atleta?`<p class="muted" style="font-size:.88rem">Você também está cadastrado como atleta.</p><button class="btn ghost wide" id="toAtleta">${ic('dumb',18)} Abrir meu treino</button>`
+     :`<p class="muted" style="font-size:.88rem">Crie seu perfil de atleta para treinar pelo app. Os treinos, cargas, medidas e a semana que você já registrou são trazidos junto.</p><button class="btn wide" id="selfAtl">Criar meu perfil de atleta</button>`}</section></div>`;
+}
+/* folha: atribuir um treino a um atleta */
+function openAssign(ref){
+  const w=libDef(ref);if(!w)return;
+  $('#layer').innerHTML=`<div class="sheet" id="sh" role="dialog" aria-modal="true" aria-label="Atribuir treino"><div class="in">
+   <div class="row between" style="flex-wrap:nowrap"><div style="min-width:0"><div class="eyebrow">Atribuir treino</div><h2>${esc(w.nm)}</h2></div><button class="btn ghost sm" id="shx">Fechar</button></div>
+   ${COACH.atletas.length?COACH.atletas.map(a=>{const tem=(a.treinos||[]).some(t=>t.origem===w.id);return `<div class="pkrow" style="grid-template-columns:40px minmax(0,1fr) auto"><span class="av">${esc(firstName(a.nome).slice(0,1).toUpperCase())}</span><div style="min-width:0"><b>${esc(a.nome)}</b><div class="muted" style="font-size:.76rem">${tem?'já tem este treino':esc((a.perfil||{}).objetivo||'')}</div></div><button class="btn sm ${tem?'ghost':''}" data-asg="${esc(a.email)}" data-ref="${esc(ref)}">${tem?'De novo':'Atribuir'}</button></div>`}).join('')
+    :'<div class="empty">Cadastre um atleta primeiro.</div>'}</div></div>`;
+  $('#sh').addEventListener('click',ev=>{if(ev.target.id==='sh'||ev.target.id==='shx')$('#layer').innerHTML=''});
+}
+/* folha: escolher treino da biblioteca para o atleta aberto */
+function openAssignPick(){
+  const opts=[...COACH.treinos.map(t=>['lib:'+t.id,t]),...MODELOS.map(t=>['mod:'+t.id,t]),...Object.keys(PLAN).map(k=>['plan:'+k,libDef('plan:'+k)])];
+  $('#layer').innerHTML=`<div class="sheet" id="sh" role="dialog" aria-modal="true" aria-label="Atribuir treino"><div class="in" style="height:92%">
+   <div class="row between"><div><div class="eyebrow">Para ${esc(firstName(A_CUR.nome))}</div><h2>Atribuir treino</h2></div><button class="btn ghost sm" id="shx">Fechar</button></div>
+   <div class="pklist">${opts.map(([ref,t])=>`<div class="pkrow" style="grid-template-columns:52px minmax(0,1fr) auto"><span class="th">${exThumb(exInfo(t.ex[0].id))}</span><div style="min-width:0"><b>${esc(t.nm)}</b><div class="muted" style="font-size:.76rem">${t.ex.length} exercícios · ${ref.startsWith('lib')?'por '+esc(firstName(t.autorNome)||'treinador'):ref.startsWith('mod')?'modelo pronto':'plano inicial'}</div></div><button class="btn sm" data-asg="${esc(A_CUR.email)}" data-ref="${esc(ref)}">Atribuir</button></div>`).join('')}</div></div></div>`;
+  $('#sh').addEventListener('click',ev=>{if(ev.target.id==='sh'||ev.target.id==='shx')$('#layer').innerHTML=''});
+}
+async function enterCoach(){
+  APP_READY=true;MODE='coach';try{localStorage.setItem('mt_mode','coach')}catch(e){}
+  stopRest();session=null;tab='atletas';
+  $('#app').innerHTML='<div class="empty" style="min-height:60vh;align-content:center">Carregando o painel...</div>';buildNav();
+  try{await CDB.loadAll()}catch(e){toast('Não foi possível carregar o painel. Verifique a internet.')}
+  render();
+}
+async function enterAtleta(){
+  APP_READY=true;MODE='atleta';try{localStorage.setItem('mt_mode','atleta')}catch(e){}
+  tab='hoje';DB.ref=fsdb().collection('atletas').doc(ROLE.email);buildNav();
+  $('#app').innerHTML='<div class="empty" style="min-height:60vh;align-content:center">Carregando seus treinos...</div>';
+  try{await DB.load()}catch(e){toast('Sem conexão. Mostrando dados deste aparelho.')}
+  render();
+}
+/* cria o perfil de atleta do próprio treinador, trazendo os dados da conta antiga (usuarios/{uid}) */
+async function createSelfAtleta(){
+  const me=ROLE.email,ref=fsdb().collection('atletas').doc(me);
+  toast('Criando seu perfil...');
+  let old={},hist=[],med=[];
+  try{const u=fsdb().collection('usuarios').doc(USER.uid),d=await u.get();if(d.exists)old=d.data();
+    const [h,m]=await Promise.all([u.collection('historico').get(),u.collection('medidas').get()]);hist=h.docs.map(x=>x.data());med=m.docs.map(x=>x.data())}catch(e){}
+  const tre=Array.isArray(old.treinos)?old.treinos:[];
+  const data={nome:ROLE.nome||USER.displayName||me,treinadorEmail:me,criado:Date.now(),perfil:old.perfil||null,inicio:old.inicio||ymd(new Date()),
+    agenda:Array.isArray(old.agenda)&&old.agenda.length===7?old.agenda:AGENDA_PADRAO,treinos:tre,rascunho:old.rascunho||null};
+  if(hist.length){const u=[...hist].sort((a,b)=>tsOf(b)-tsOf(a))[0];data.ultimo={ts:tsOf(u),nm:u.nm}}
+  await ref.set(data);
+  for(let i=0;i<hist.length;i+=400){const b=fsdb().batch();hist.slice(i,i+400).forEach(x=>b.set(ref.collection('historico').doc(),x));await b.commit()}
+  for(let i=0;i<med.length;i+=400){const b=fsdb().batch();med.slice(i,i+400).forEach(x=>b.set(ref.collection('medidas').doc(),x));await b.commit()}
+  ROLE.atleta=true;COACH.atletas.push({...data,email:me});
+  toast(hist.length?`Perfil criado com ${hist.length} treinos importados`:'Perfil de atleta criado');
+}
+function buildNav(){
+  const nav=document.querySelector('nav.tabs');
+  const items=MODE==='coach'?[['atletas','body','Atletas'],['biblioteca','dumb','Biblioteca'],['exercicios','grid','Exercícios'],...(ROLE.admin?[['equipe','gear','Equipe']]:[])]
+    :[['hoje','cal','Hoje'],['treinos','dumb','Treinos'],['corpo','body','Corpo'],['progresso','chart','Progresso'],['exercicios','grid','Exercícios']];
+  nav.style.gridTemplateColumns=`repeat(${items.length},1fr)`;
+  nav.innerHTML=items.map(([k,i,l])=>`<button data-tab="${k}">${ic(i)} ${l}</button>`).join('');
+}
+function blockedScreen(email){
+  APP_READY=false;
+  document.querySelector('nav.tabs').hidden=true;
+  $('#app').innerHTML=`<div class="ob"><div class="splash"><div class="logo">${ic('dumb',36)}</div><h1>Meu<span class="acc">Treino</span></h1>
+   <div class="panel stack"><h3>Acesso ainda não liberado</h3><p class="muted">Seu e-mail não está cadastrado. Peça ao seu treinador para cadastrar este endereço no MeuTreino:</p>
+    <div class="copyrow"><b id="myMail">${esc(email)}</b><button class="btn ghost sm" id="copyMail">Copiar</button></div>
+    <p class="muted" style="font-size:.82rem">Depois do cadastro, é só entrar de novo.</p></div></div>
+   <button class="btn ghost wide" id="logout">Sair e entrar com outra conta</button></div>`;
+}
+
 /* ---------- render ---------- */
+let APP_READY=false;
 function render(){
+  if(DB.ready()&&!APP_READY)return;
   anims.forEach(id=>cancelAnimationFrame(id));anims.clear();
   const nav=document.querySelector('nav.tabs');
+  if(MODE==='coach'&&DB.online){nav.hidden=false;let html;
+    if(edit&&tab==='montar')html=vMontar();else if(tab==='gerar')html=vGerar();else if(tab==='atlForm'&&atlEdit)html=vAtlForm();
+    else html=({atletas:vAtletas,atleta:vAtleta,biblioteca:vBiblioteca,exercicios:vExercicios,equipe:vEquipe}[tab]||vAtletas)();
+    $('#app').innerHTML=html;
+    const cur=['atleta','atlForm'].includes(tab)||(tab==='montar'&&edit&&edit.ctx==='snap')||(tab==='gerar'&&gen.atleta)?'atletas':['montar','gerar'].includes(tab)?'biblioteca':tab;
+    nav.querySelectorAll('button').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===cur?'page':'false'));
+    document.querySelectorAll('#app svg.figsvg').forEach(svg=>{const e=EXM[svg.dataset.fig];if(e)drawFig(svg,e,.75)});return}
   if(!PERFIL){nav.hidden=true;$('#app').innerHTML=vOnboarding();return}
   nav.hidden=false;
   let html;
@@ -1160,6 +1482,62 @@ document.addEventListener('click',e=>{
     PERFIL={objetivo:ob.objetivo,nivel:ob.nivel,pesoInicial:peso,inicio:ini};start=ini;
     DB.perfil(PERFIL);DB.start(ini);DB.addMed({date:ymd(new Date()),peso,cintura:cint});
     tab='hoje';render();toast('Tudo pronto. Bom treino!');return}
+  /* painel do treinador */
+  if(t.id==='toAtleta'){$('#layer').innerHTML='';enterAtleta();return}
+  if(t.id==='toCoach'){$('#layer').innerHTML='';enterCoach();return}
+  if(t.id==='copyMail'){const v=$('#myMail').textContent;try{navigator.clipboard.writeText(v).then(()=>toast('E-mail copiado'),()=>toast(v))}catch(err){toast(v)}return}
+  if(t.id==='newAtl'){atlEdit={};go('atlForm');return}
+  if(t.dataset.atl){const em=t.dataset.atl;A_CUR=COACH.atletas.find(a=>a.email===em)?{...COACH.atletas.find(a=>a.email===em),hist:[],med:[]}:null;aTab='semana';aHistShow=8;go('atleta');
+    CDB.atleta(em).then(()=>{if(tab==='atleta')render()}).catch(()=>toast('Não foi possível abrir o atleta'));return}
+  if(t.id==='aBack'){go('atletas');return}
+  if(t.dataset.at){aTab=t.dataset.at;render();return}
+  if(t.id==='aMoreHist'){aHistShow+=8;render();return}
+  if(t.dataset.apex){aProgEx=t.dataset.apex;render();return}
+  if(t.id==='atlEditBtn'){atlEdit={...A_CUR,email0:A_CUR.email};go('atlForm');return}
+  if(t.id==='afBack'){const back=atlEdit&&atlEdit.email0?'atleta':'atletas';atlEdit=null;go(back);return}
+  if(t.id==='afSave'){const nome=$('#afNome').value.trim(),isNew=!atlEdit.email0,email=(isNew?$('#afEmail').value:atlEdit.email0).trim().toLowerCase();
+    if(!nome){toast('Informe o nome');$('#afNome').focus();return}
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){toast('E-mail inválido');$('#afEmail').focus();return}
+    const peso=num($('#afPeso').value),ini=$('#afIni').value||ymd(new Date());
+    const perfil={...(atlEdit.perfil||{}),objetivo:$('#afObj').value,nivel:$('#afNiv').value,pesoInicial:peso,inicio:ini};
+    const data={nome,nascimento:$('#afNasc').value||null,altura:num($('#afAlt').value),obs:$('#afObs').value.trim()||null,perfil,inicio:ini};
+    t.disabled=true;
+    (async()=>{try{
+      if(isNew){let ex=null;try{ex=await fsdb().collection('atletas').doc(email).get()}catch(err){ex={exists:true,data:()=>({})}}
+        if(ex.exists){t.disabled=false;toast(ex.data().treinadorEmail===ROLE.email?'Você já cadastrou este atleta':'Este e-mail já está cadastrado por outro treinador');return}
+        const full={...data,treinadorEmail:ROLE.email,criado:Date.now(),agenda:DESC7,treinos:[]};
+        await fsdb().collection('atletas').doc(email).set(full);
+        if(peso)await fsdb().collection('atletas').doc(email).collection('medidas').add({date:ymd(new Date()),peso,cintura:null,ts:Date.now()});
+        COACH.atletas.push({...full,email});COACH.atletas.sort((x,y)=>String(x.nome).localeCompare(String(y.nome),'pt'));
+        atlEdit=null;A_CUR={...full,email,hist:[],med:[]};aTab='treinos';go('atleta');toast(nome.split(' ')[0]+' cadastrado. Agora atribua os treinos.');CDB.atleta(email).then(()=>tab==='atleta'&&render()).catch(()=>{})}
+      else{await CDB.saveAtleta(email,data);atlEdit=null;aTab='ficha';go('atleta');toast('Ficha salva')}
+    }catch(err){t.disabled=false;toast('Não foi possível salvar. Verifique a internet.')}})();return}
+  if(t.id==='afDel'){if(t.dataset.sure){CDB.delAtleta(atlEdit.email0).then(()=>{atlEdit=null;A_CUR=null;go('atletas');toast('Atleta excluído')}).catch(()=>toast('Não foi possível excluir'))}else{t.dataset.sure='1';t.textContent='Toque de novo para excluir o atleta e o histórico dele'}return}
+  if(t.id==='genAtl'){gen.atleta=A_CUR.email;gen.res=null;go('gerar');return}
+  if(t.id==='genLib'){gen.atleta='';gen.res=null;go('gerar');return}
+  if(t.id==='assignOpen'){openAssignPick();return}
+  if(t.dataset.assign){openAssign(t.dataset.assign);return}
+  if(t.dataset.asg){const em=t.dataset.asg,ref=t.dataset.ref,w=libDef(ref);const atl=A_CUR&&A_CUR.email===em?A_CUR:COACH.atletas.find(a=>a.email===em);if(!w||!atl)return;
+    t.disabled=true;assignTo(atl,w,ref.startsWith('lib:')?w.id:null).then(()=>{$('#layer').innerHTML='';if(tab==='atleta')aTab='treinos';render();toast(`${w.nm} atribuído a ${firstName(atl.nome)}. Defina o dia em Semana.`)}).catch(()=>{t.disabled=false});return}
+  if(t.dataset.snapedit){const sn=(A_CUR.treinos||[]).find(x=>x.id===t.dataset.snapedit);if(!sn)return;edit=JSON.parse(JSON.stringify({id:sn.id,nm:sn.nm,ex:sn.ex}));edit.ctx='snap';go('montar');return}
+  if(t.dataset.snaprm){if(!t.dataset.sure){t.dataset.sure='1';t.textContent='Toque de novo';return}
+    const id=t.dataset.snaprm,ts=(A_CUR.treinos||[]).filter(x=>x.id!==id),ag=(A_CUR.agenda||DESC7).map(k=>k===id?'descanso':k);
+    CDB.saveAtleta(A_CUR.email,{treinos:ts,agenda:ag}).then(()=>{render();toast('Treino removido do atleta')}).catch(()=>{});return}
+  if(t.dataset.snapup){const sn=(A_CUR.treinos||[]).find(x=>x.id===t.dataset.snapup),lib=sn&&COACH.treinos.find(x=>x.id===sn.origem);if(!lib)return;
+    const ts=A_CUR.treinos.map(x=>x.id===sn.id?{...x,nm:lib.nm,ex:JSON.parse(JSON.stringify(lib.ex)),atualizado:lib.atualizado,custom:false}:x);
+    CDB.saveAtleta(A_CUR.email,{treinos:ts}).then(()=>{render();toast('Treino atualizado')}).catch(()=>{});return}
+  if(t.dataset.lt){libTab=t.dataset.lt;libShowT=10;render();return}
+  if(t.id==='moreLibT'){libShowT+=10;render();return}
+  if(t.id==='newLib'){edit={id:null,nm:'',ex:[],ctx:'lib'};go('montar');return}
+  if(t.dataset.libedit){const w=COACH.treinos.find(x=>x.id===t.dataset.libedit);if(!w)return;edit=JSON.parse(JSON.stringify({id:w.id,nm:w.nm,ex:w.ex}));edit.ctx='lib';go('montar');return}
+  if(t.dataset.libcopy){const w=libDef(t.dataset.libcopy);if(!w)return;edit=JSON.parse(JSON.stringify({id:null,nm:w.nm+' (cópia)',ex:w.ex}));edit.ctx='lib';go('montar');return}
+  if(t.id==='trAdd'){const nome=$('#trNome').value.trim(),email=$('#trEmail').value.trim().toLowerCase();
+    if(!nome||!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){toast('Informe nome e e-mail válidos');return}
+    if(email===ROLE.email){toast('Você já é o administrador');return}
+    CDB.saveTreinador(email,{nome,ativo:true,criado:Date.now()}).then(()=>{render();toast(firstName(nome)+' cadastrado como treinador')}).catch(()=>toast('Não foi possível cadastrar'));return}
+  if(t.dataset.trtog){const tr=COACH.treinadores.find(x=>x.email===t.dataset.trtog);CDB.saveTreinador(tr.email,{ativo:!tr.ativo}).then(()=>{render();toast(tr.ativo?'Acesso liberado':'Acesso bloqueado')}).catch(()=>{});return}
+  if(t.dataset.trdel){if(!t.dataset.sure){t.dataset.sure='1';t.textContent='Confirmar';return}CDB.delTreinador(t.dataset.trdel).then(()=>{render();toast('Treinador removido')}).catch(()=>{});return}
+  if(t.id==='selfAtl'){t.disabled=true;createSelfAtleta().then(render).catch(()=>{t.disabled=false;toast('Não foi possível criar o perfil')});return}
   /* navegação */
   if(t.dataset.go){go(t.dataset.go);return}
   if(t.id==='openCfg'){openCfg();return}
@@ -1176,7 +1554,7 @@ document.addEventListener('click',e=>{
   if(t.dataset.tv){tView=t.dataset.tv;render();return}
   if(t.id==='newW'){newEdit(null);return}
   if(t.id==='openGen'||t.id==='openGen2'){if(!DBX)loadDBX();go('gerar');return}
-  if(t.id==='gBack'){go('treinos');return}
+  if(t.id==='gBack'){go(MODE==='coach'?(gen.atleta?'atleta':'biblioteca'):'treinos');return}
   if(t.dataset.gk){gen[t.dataset.gk]=t.dataset.gk==='equip'?t.dataset.gv:+t.dataset.gv;gen.res=null;render();return}
   if(t.id==='gGo'){const run=()=>{if(gen.res)gen.seed++;generate();render();setTimeout(()=>{const p=document.querySelector('.wk');if(p)p.scrollIntoView({behavior:'smooth',block:'start'})},50)};DBX?run():loadDBX().then(run);return}
   if(t.id==='gSaveAg'){saveGen(true);return}
@@ -1184,7 +1562,7 @@ document.addEventListener('click',e=>{
   if(t.id==='agReset'){AGENDA=null;DB.agenda(null);render();toast('Semana voltou ao padrão A, B, C e cardio');return}
   if(t.dataset.edit){newEdit(TREINOS.find(w=>w.id===t.dataset.edit));return}
   if(t.dataset.copy){newEdit(MODELOS.find(w=>w.id===t.dataset.copy));return}
-  if(t.id==='edBack'){edit=null;go('treinos');return}
+  if(t.id==='edBack'){const c=edit&&edit.ctx;edit=null;go(c==='lib'?'biblioteca':c==='snap'?'atleta':'treinos');return}
   if(t.id==='openPick'){openPick();return}
   if(t.dataset.pg){pick.grupo=t.dataset.pg;pick.show=20;openPick();$('#pkList').scrollTop=0;return}
   if(t.id==='pkMore'){pick.show+=20;openPick();return}
@@ -1193,8 +1571,13 @@ document.addEventListener('click',e=>{
   if(t.dataset.rm){edit.ex.splice(+t.dataset.rm,1);render();return}
   if(t.id==='edSave'){edit.nm=$('#edNome').value.trim();if(!edit.nm){toast('Dê um nome ao treino');$('#edNome').focus();return}if(!edit.ex.length){toast('Adicione pelo menos um exercício');return}
     const w={id:edit.id||'t'+Date.now(),nm:edit.nm,ex:edit.ex.map((e,i,a)=>{const o={id:e.id};if(+e.series)o.series=Math.min(+e.series,10);if(e.reps)o.reps=String(e.reps).slice(0,20);if(+e.desc)o.desc=Math.min(+e.desc,600);if(num(e.carga)!==null)o.carga=String(num(e.carga));if(e.metodo&&!(e.metodo==='biset'&&i===a.length-1))o.metodo=e.metodo;if(e.obs)o.obs=String(e.obs).slice(0,80);return o})};
+    if(edit.ctx==='lib'){const old=COACH.treinos.find(x=>x.id===edit.id);const lw=old?{...old,nm:w.nm,ex:w.ex}:{id:'t'+Date.now().toString(36),nm:w.nm,ex:w.ex};
+      CDB.saveTreino(lw).then(()=>{edit=null;libTab='meus';go('biblioteca');toast('Treino salvo na biblioteca')}).catch(()=>{});return}
+    if(edit.ctx==='snap'){const ts=(A_CUR.treinos||[]).map(x=>x.id===edit.id?{...x,nm:w.nm,ex:w.ex,atualizado:Date.now(),custom:true}:x);
+      CDB.saveAtleta(A_CUR.email,{treinos:ts}).then(()=>{edit=null;aTab='treinos';go('atleta');toast('Treino do atleta atualizado')}).catch(()=>{});return}
     const old=TREINOS.find(x=>x.id===w.id);if(old&&old.gen)w.gen=true;
     const i=TREINOS.findIndex(x=>x.id===w.id);if(i>=0)TREINOS[i]=w;else TREINOS.push(w);DB.treinos(TREINOS);edit=null;tView='meus';go('treinos');toast('Treino salvo');return}
+  if(t.id==='edDel'&&edit.ctx==='lib'){if(t.dataset.sure){CDB.delTreino(edit.id).then(()=>{edit=null;go('biblioteca');toast('Treino excluído da biblioteca')}).catch(()=>toast('Não foi possível excluir'))}else{t.dataset.sure='1';t.textContent='Toque de novo para excluir'}return}
   if(t.id==='edDel'){if(t.dataset.sure){TREINOS=TREINOS.filter(w=>w.id!==edit.id);DB.treinos(TREINOS);if(AGENDA&&AGENDA.includes(edit.id)){AGENDA=AGENDA.map(k=>k===edit.id?'descanso':k);DB.agenda(AGENDA)}if(session&&session.k===edit.id){session=null;DB.draft(null)}edit=null;tView='meus';go('treinos');toast('Treino excluído')}else{t.dataset.sure='1';t.textContent='Toque de novo para excluir'}return}
   if(t.dataset.lm){libMode=t.dataset.lm;libShow=12;query='';if(libMode==='bib'&&DBX_ERR){DBX_ERR=false;loadDBX()}render();return}
   if(t.dataset.bg){bGrupo=t.dataset.bg;libShow=12;render();return}
@@ -1233,6 +1616,8 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('input',e=>{
   const t=e.target;
+  if(t.id==='libQ'){libQ=t.value;libShowT=10;const pos=t.selectionStart;render();const n=$('#libQ');n.focus();n.setSelectionRange(pos,pos);return}
+  if(t.id==='atlQ'){atlQ=t.value;const pos=t.selectionStart;render();const n=$('#atlQ');n.focus();n.setSelectionRange(pos,pos);return}
   if(t.id==='q'){query=t.value;libShow=12;const pos=t.selectionStart;render();const n=$('#q');n.focus();n.setSelectionRange(pos,pos);return}
   if(t.dataset&&t.dataset.ef&&edit){edit.ex[+t.dataset.i][t.dataset.ef]=t.value;return}
   if(t.id==='edNome'&&edit){edit.nm=t.value;return}
@@ -1245,6 +1630,10 @@ document.addEventListener('change',e=>{
   if(t.id==='ivl'){cardioRun.intervalado=t.checked;render()}
   if(t.dataset&&t.dataset.ag!==undefined&&t.tagName==='SELECT'){const ag=[...agenda()];ag[+t.dataset.ag]=t.value;AGENDA=ag;DB.agenda(AGENDA);toast(AB[+t.dataset.ag]+': '+dayPlan(+t.dataset.ag).nm);return}
   if(t.dataset&&t.dataset.ef==='metodo'&&edit){edit.ex[+t.dataset.i].metodo=t.value;render();return}
+  if(t.id==='genAtlSel'){gen.atleta=t.value;gen.res=null;if(t.value&&!(A_CUR&&A_CUR.email===t.value)){CDB.atleta(t.value).then(render).catch(()=>{})}render();return}
+  if(t.dataset&&t.dataset.aag!==undefined){const wd=+t.dataset.aag,v=t.value,a=A_CUR;
+    const setDay=id=>{const ag=[...(a.agenda||DESC7)];ag[wd]=id;return CDB.saveAtleta(a.email,{agenda:ag}).then(()=>{render();toast(AB[wd]+' atualizado')})};
+    if(/^(lib|mod|plan):/.test(v)){const w=libDef(v);assignTo(a,w,v.startsWith('lib:')?w.id:null).then(s=>setDay(s.id)).catch(()=>render())}else setDay(v).catch(()=>render());return}
   if(t.id==='bEq'){bEq=t.value;libShow=12;render()}
   if(t.id==='bNiv'){bNiv=t.value;libShow=12;render()}
   if(t.id==='bLow'){bLow=t.checked;libShow=12;render()}
@@ -1262,7 +1651,7 @@ const DB={
   ready(){return typeof firebase!=='undefined'&&typeof firebase.auth==='function'},
   async load(){
     if(!this.online){TREINOS=store.get('treinos',[]);AGENDA=store.get('agenda',null);HIST=store.get('hist',[]);MED=store.get('med',[]);PERFIL=store.get('perfil',null);session=store.get('draft',null);return}
-    const u=this.ref,d=await u.get(),data=d.exists?d.data():{};
+    const u=this.ref,d=await u.get(),data=d.exists?d.data():{};ATL=data;
     if(data.inicio)start=data.inicio;
     PERFIL=data.perfil||null;TREINOS=Array.isArray(data.treinos)?data.treinos:[];store.set('treinos',TREINOS);AGENDA=Array.isArray(data.agenda)&&data.agenda.length===7?data.agenda:null;store.set('agenda',AGENDA);
     session=data.rascunho?JSON.parse(data.rascunho):null;
@@ -1270,21 +1659,22 @@ const DB={
     HIST=q.docs.map(x=>x.data());MED=m.docs.map(x=>x.data()).sort(byTs);
     store.set('hist',HIST);store.set('med',MED);store.set('start',start);store.set('perfil',PERFIL);
   },
-  add(e){e.ts=Date.now();HIST.unshift(e);store.set('hist',HIST);if(this.online)this.ref.collection('historico').add(e).catch(()=>toast('Salvo neste aparelho. Vai sincronizar quando a internet voltar.'))},
+  add(e){e.ts=Date.now();HIST.unshift(e);store.set('hist',HIST);if(this.online){this.ref.collection('historico').add(e).catch(()=>toast('Salvo neste aparelho. Vai sincronizar quando a internet voltar.'));this.ref.set({ultimo:{ts:e.ts,nm:e.nm}},{merge:true}).catch(()=>{})}},
   addMed(m){m.ts=Date.parse(m.date+'T12:00')||Date.now();MED.push(m);MED.sort(byTs);store.set('med',MED);if(this.online)this.ref.collection('medidas').add(m).catch(()=>{})},
-  agenda(a){store.set('agenda',a);if(this.online)this.ref.set({agenda:a},{merge:true}).catch(()=>{})},
-  treinos(l){store.set('treinos',l);if(this.online)this.ref.set({treinos:l},{merge:true}).catch(()=>toast('Salvo neste aparelho. Vai sincronizar quando a internet voltar.'))},
+  agenda(a){store.set('agenda',a);if(this.online&&CAN_PLAN())this.ref.set({agenda:a},{merge:true}).catch(()=>{})},
+  treinos(l){store.set('treinos',l);if(this.online&&CAN_PLAN())this.ref.set({treinos:l},{merge:true}).catch(()=>toast('Salvo neste aparelho. Vai sincronizar quando a internet voltar.'))},
   perfil(p){store.set('perfil',p);if(this.online)this.ref.set({perfil:p},{merge:true}).catch(()=>{})},
   draft(s){store.set('draft',s);if(this.online)this.ref.set({rascunho:s?JSON.stringify(s):null},{merge:true}).catch(()=>{})},
   start(v){store.set('start',v);if(this.online)this.ref.set({inicio:v},{merge:true}).catch(()=>{})},
   logout(){$('#layer').innerHTML='';firebase.auth().signOut()}
 };
 function loginScreen(msg){
+  APP_READY=false;
   document.querySelector('nav.tabs').hidden=true;
   $('#app').innerHTML=`<div class="ob"><div class="splash">
     <div class="logo">${ic('dumb',36)}</div>
     <h1>Meu<span class="acc">Treino</span></h1>
-    <p class="muted" style="font-size:1.05rem;max-width:30ch">Seu plano de academia e cardio, com recuperação, cargas e medidas salvas na sua conta.</p>
+    <p class="muted" style="font-size:1.05rem;max-width:32ch">Treinadores montam e acompanham. Atletas treinam, registram cargas e evoluem. Entre com a sua conta Google.</p>
     ${msg?`<div class="warn">${msg}</div>`:''}</div>
     <button class="btn wide" id="gLogin">Entrar com Google</button></div>`;
   $('#gLogin').onclick=async()=>{const p=new firebase.auth.GoogleAuthProvider();
@@ -1296,14 +1686,23 @@ async function boot(){
   try{firebase.firestore().enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(e){}
   firebase.auth().onAuthStateChanged(async u=>{
     if(!u){USER=null;DB.online=false;loginScreen();return}
-    if(u.email!==DONO){await firebase.auth().signOut();loginScreen('Esta conta não tem acesso ao MeuTreino.');return}
-    USER=u;DB.online=true;DB.ref=firebase.firestore().collection('usuarios').doc(u.uid);
-    $('#app').innerHTML='<div class="empty" style="min-height:60vh;align-content:center">Carregando seus treinos...</div>';
-    try{await DB.load()}catch(e){HIST=store.get('hist',[]);MED=store.get('med',[]);PERFIL=store.get('perfil',null);toast('Sem conexão. Mostrando dados deste aparelho.')}
-    render();
+    USER=u;DB.online=true;const email=String(u.email||'').toLowerCase();
+    ROLE={admin:email===DONO,treinador:email===DONO,atleta:false,email,nome:u.displayName||''};
+    $('#app').innerHTML='<div class="empty" style="min-height:60vh;align-content:center">Entrando...</div>';
+    try{
+      if(!ROLE.admin){const tr=await fsdb().collection('treinadores').doc(email).get();ROLE.treinador=tr.exists&&tr.data().ativo!==false;if(tr.exists&&tr.data().nome)ROLE.nome=tr.data().nome}
+      const at=await fsdb().collection('atletas').doc(email).get();ROLE.atleta=at.exists;
+      store.set('role',{email,treinador:ROLE.treinador,atleta:ROLE.atleta,nome:ROLE.nome});
+    }catch(e){const r=store.get('role',null);if(r&&r.email===email){ROLE.treinador=ROLE.admin||r.treinador;ROLE.atleta=r.atleta;ROLE.nome=r.nome||ROLE.nome}}
+    if(!ROLE.treinador&&!ROLE.atleta){blockedScreen(email);return}
+    let m=null;try{m=localStorage.getItem('mt_mode')}catch(e){}
+    if(m==='coach'&&!ROLE.treinador)m=null;if(m==='atleta'&&!ROLE.atleta)m=null;
+    if(!m)m=ROLE.treinador?'coach':'atleta';
+    if(m==='coach')enterCoach();else enterAtleta();
   });
 }
 (()=>{const q=new URLSearchParams(location.search).get('tab');if(q==='medidas'){tab='progresso';progTab='medidas'}else if(['hoje','treinos','corpo','progresso','exercicios'].includes(q))tab=q})();
+buildNav();
 boot();
 loadDBX();
 gifAll().then(all=>{const ks=Object.keys(all);ks.forEach(k=>setGif(k,all[k]));if(ks.length)render()});

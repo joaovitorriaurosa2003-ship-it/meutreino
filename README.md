@@ -1,6 +1,6 @@
 # MeuTreino
 
-App pessoal de treino (academia e cardio) de João Vitor Riau Rosa. Arquivo único em HTML, login com Google, dados no Firestore, instalável no celular (PWA). Publicado em meutreino.joaorosapsi.com.br via GitHub Pages.
+App de treino (academia e cardio) de João Vitor Riau Rosa, com painel do treinador e área do atleta. Arquivo único em HTML, login com Google, dados no Firestore, instalável no celular (PWA). Publicado em meutreino.joaorosapsi.com.br via GitHub Pages.
 
 Enquanto o Firebase não estiver configurado, o app funciona em **modo local** (dados salvos só no navegador).
 
@@ -14,7 +14,7 @@ Projeto `meutreino-324ac`: login com Google ativo, domínio autorizado, Firestor
 2. **Authentication** > Começar > **Método de login** > ative **Google**.
 3. **Authentication** > Configurações > **Domínios autorizados** > adicione `meutreino.joaorosapsi.com.br`.
 4. **Firestore Database** > Criar banco de dados > modo de produção > região `southamerica-east1` (São Paulo).
-5. Em **Firestore > Regras**, cole o conteúdo do arquivo `firestore.rules` e publique. Só a conta joaovitorriaurosa2003@gmail.com consegue ler e gravar.
+5. Em **Firestore > Regras**, cole o conteúdo do arquivo `firestore.rules` e publique.
 6. **Configurações do projeto** (engrenagem) > Seus apps > ícone **</>** (Web) > registre o app `MeuTreino`.
 7. Copie o objeto `firebaseConfig` e cole no `index.html`, no lugar da linha que começa com `const FB_CONFIG={apiKey:"COLE_AQUI"`.
 
@@ -39,15 +39,29 @@ Depois de instalado, abre em tela cheia, tem atalhos (toque longo no ícone: Tre
 
 Arquivos do PWA: `manifest.webmanifest`, `sw.js`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `apple-touch-icon.png`.
 
+## Perfis e acesso
+
+- **Administrador** (joaovitorriaurosa2003@gmail.com): cadastra e bloqueia treinadores na aba **Equipe**, vê todos os atletas e pode editar qualquer treino da biblioteca. Também é treinador.
+- **Treinador**: entra com o e-mail Google cadastrado pelo administrador. Cadastra os próprios atletas, monta e gera treinos, define a semana de cada atleta e acompanha o progresso. Só vê os atletas que cadastrou.
+- **Atleta**: entra com o e-mail Google que o treinador cadastrou. Vê a semana e os treinos enviados, registra cargas, cardio e medidas. Não edita os treinos.
+- **Biblioteca compartilhada**: todo treino montado ou gerado por um treinador fica visível para todos os treinadores. Só o autor (ou o administrador) edita ou exclui; os outros podem atribuir ou copiar.
+- Ao atribuir, o atleta recebe uma cópia do treino. Ajustes feitos para um atleta não mudam a biblioteca. Se o autor atualizar o treino, aparece a opção "Atualizar para a versão nova".
+- Quem é treinador e atleta ao mesmo tempo alterna em Ajustes ("Abrir meu treino" / "Abrir painel do treinador").
+- E-mail sem cadastro vê a tela "Acesso ainda não liberado" com o próprio e-mail para enviar ao treinador.
+
 ## Estrutura dos dados
 
 ```
-usuarios/{uid}
-  inicio: "2026-10-18"        data de início do plano
-  rascunho: "{...}"           treino em andamento
-usuarios/{uid}/historico/{id}
-  date, nm, k, det[] (cargas) ou mod, min (cardio), ts
+treinadores/{email}            nome, ativo, criado
+treinos/{id}                   nm, ex[], gen, autorEmail, autorNome, criado, atualizado
+atletas/{email}                nome, nascimento, altura, obs, treinadorEmail, perfil{objetivo,nivel,pesoInicial,inicio},
+                               inicio, agenda[7], treinos[] (cópias), rascunho, ultimo{ts,nm}
+atletas/{email}/historico/{id} date, nm, k, det[] (cargas) ou mod, min (cardio), ts
+atletas/{email}/medidas/{id}   date, peso, cintura, ts
+usuarios/{uid}                 dados antigos do uso pessoal (só leitura, importados em Equipe > Meu treino pessoal)
 ```
+
+As regras em `firestore.rules` garantem: só o administrador grava treinadores; só treinadores leem a biblioteca; o atleta lê só o próprio documento e altera apenas rascunho, perfil, início e último treino; o treinador só acessa os atletas dele.
 
 ## Biblioteca de exercícios (`exercicios.json`)
 
